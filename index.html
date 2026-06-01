@@ -113,9 +113,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
   font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;
   padding:14px;border-radius:12px;cursor:pointer;transition:all 0.2s;}
 .btn-guest:hover{border-color:var(--sky);color:var(--sky);}
-.auth-err{background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:8px;
+.auth-err{display:none;background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:8px;
   padding:10px 14px;font-size:12px;color:#ff8888;display:none;}
-.auth-err.show{display:block;}
+.auth-err.show{display:block!important;}
 #field-username-wrap{display:none;}
 
 /* ══════════════════════
@@ -471,7 +471,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
       </div>
     </div>
     <div class="auth-body">
-      <div id="auth-err" class="auth-err">Please enter your email and password.</div>
+      <div id="auth-err" class="auth-err"></div>
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">LOGIN</button>
         <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">SIGN UP</button>
@@ -779,7 +779,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
 // ══════════════════════════════════════════════════════════
 
 const SUPABASE_URL = 'https://mimwbeexqskhefistbvt.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_2uifA3Eov336vuKzE5mwJQ_XeJQgy3L';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
 const ADMIN_EMAIL  = 'aqayali8@gmail.com';
 
 // ── Init Supabase ─────────────────────────────────────────
@@ -810,7 +810,7 @@ function switchTab(mode) {
   const btn = document.getElementById('btn-auth');
   if (btn) btn.textContent = mode === 'login' ? 'ENTER' : 'JOIN WITZ';
   const err = document.getElementById('auth-err');
-  if (err) { err.textContent = ''; err.classList.remove('show'); }
+  if (err) { err.textContent = ''; err.classList.remove('show'); err.style.display='none'; }
 }
 
 // ── Auth submit ───────────────────────────────────────────
@@ -822,13 +822,13 @@ function authSubmit() {
   const uname = document.getElementById('input-username')?.value?.trim();
   const errEl = document.getElementById('auth-err');
   const btn   = document.getElementById('btn-auth');
-  if (errEl) errEl.textContent = '';
-  if (!email || !pass) { if (errEl) errEl.textContent = 'Enter email and password.'; return; }
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+  if (!email || !pass) { if (errEl) { errEl.textContent = 'Enter email and password.'; errEl.classList.add('show'); } return; }
   if (btn) { btn.disabled = true; btn.textContent = 'LOADING...'; }
 
   if (_authMode === 'signup') {
     if (!uname || uname.length < 2) {
-      if (errEl) errEl.textContent = 'Choose a username (2+ chars).';
+      if (errEl) { errEl.textContent = 'Choose a username (2+ chars).'; errEl.classList.add('show'); }
       if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
       return;
     }
@@ -1359,17 +1359,23 @@ let cStamps=[23,58,11], cOn=[false,false,false];
 function openComments() { document.getElementById('c-sheet')?.classList.add('open'); }
 function closeComments() { document.getElementById('c-sheet')?.classList.remove('open'); }
 function stampC(btn,idx) { cOn[idx]=!cOn[idx]; cStamps[idx]+=cOn[idx]?1:-1; btn.classList.toggle('on',cOn[idx]); const s=document.getElementById('cs'+idx); if(s)s.textContent=cStamps[idx]; }
-function postComment() {
+async function postComment() {
   const inp = document.getElementById('c-input'); if (!inp?.value.trim()) return;
+  const text = inp.value.trim();
   const list = document.getElementById('c-list'); if (!list) return;
   const i = list.children.length;
   const cols = ['#1a3a8f','#8b0000','#0f4c2a','#4a2a0a'];
   const div = document.createElement('div'); div.className = 'c-item';
-  div.innerHTML = `<div class="c-av" style="background:${cols[i%cols.length]};">${username.substring(0,2)}</div><div class="c-body"><div class="c-user">@${username.toLowerCase()}</div><div class="c-text">${inp.value.trim()}</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,${i})"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs${i}">0</span></div><span class="c-reply">Reply</span><span class="c-time">now</span></div></div>`;
+  div.innerHTML = `<div class="c-av" style="background:${cols[i%cols.length]};">${username.substring(0,2)}</div><div class="c-body"><div class="c-user">@${username.toLowerCase()}</div><div class="c-text">${text}</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,${i})"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs${i}">0</span></div><span class="c-reply">Reply</span><span class="c-time">now</span></div></div>`;
   list.insertBefore(div, list.firstChild);
   inp.value = '';
   const badge = document.getElementById('c-badge'); if (badge) badge.textContent = ++commentN;
   toast('Comment posted');
+  // Save to Supabase if logged in
+  if (_user && _currentVideoId) {
+    const sb = initSB(); if (!sb) return;
+    sb.from('comments').insert({ video_id: _currentVideoId, user_id: _user.id, text }).catch(()=>{});
+  }
 }
 
 // ── Nav / misc ────────────────────────────────────────────
