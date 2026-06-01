@@ -705,7 +705,27 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
       <div class="upload-title">POST REEL</div>
       <button class="upload-close" onclick="closeUpload()">✕</button>
     </div>
-    <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button onclick="startRecording()" style="flex:1;background:#0A1F3F;border:1px solid #C9A84C;border-radius:10px;padding:16px 10px;color:#C9A84C;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:28px;">🎥</span>
+        RECORD VIDEO
+      </button>
+      <button onclick="document.getElementById('file-pick').click()" style="flex:1;background:#0A1F3F;border:1px solid #1a3a6e;border-radius:10px;padding:16px 10px;color:#F0EDE8;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:28px;">📁</span>
+        CHOOSE FILE
+      </button>
+    </div>
+    <div id="record-preview" style="display:none;flex-direction:column;align-items:center;gap:10px;margin-bottom:12px;">
+      <video id="record-video" style="width:100%;max-height:200px;border-radius:10px;background:#000;" autoplay muted playsinline></video>
+      <div style="display:flex;gap:10px;">
+        <button id="btn-start-rec" onclick="beginRecord()" style="background:#8b0000;border:none;border-radius:8px;padding:10px 20px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer;">● REC</button>
+        <button id="btn-stop-rec" onclick="stopRecord()" style="display:none;background:#333;border:none;border-radius:8px;padding:10px 20px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer;">■ STOP</button>
+        <button id="btn-use-rec" onclick="useRecording()" style="display:none;background:#C9A84C;border:none;border-radius:8px;padding:10px 20px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;font-weight:700;cursor:pointer;">USE THIS</button>
+        <button onclick="cancelRecording()" style="background:none;border:1px solid #333;border-radius:8px;padding:10px 16px;color:#888;font-family:'Barlow Condensed',sans-serif;font-size:12px;cursor:pointer;">CANCEL</button>
+      </div>
+      <div id="rec-status" style="font-size:12px;color:#C9A84C;letter-spacing:1px;"></div>
+    </div>
+    <div class="upload-zone" onclick="document.getElementById('file-pick').click()" style="display:none;" id="upload-drop-zone">
       <svg width="48" height="48" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg" opacity="0.4">
         <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
         <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
@@ -715,6 +735,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
       <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 500MB</div>
     </div>
     <input type="file" id="file-pick" accept="video/*" style="display:none" onchange="fileSelected(this)">
+    <input type="file" id="file-pick-camera" accept="video/*" capture="environment" style="display:none" onchange="fileSelected(this)">
     <input class="upload-input" type="text" id="upload-caption" placeholder="Write your caption...">
     <input class="upload-input" type="text" id="upload-sound" placeholder="Sound name (optional)">
     <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
@@ -1120,14 +1141,16 @@ async function loadProfileVideos(){
   });
 }
 async function deleteMyVideo(videoId,url,thumbEl){
-  if(!_user||!confirm('Delete this reel?'))return;
+  if(!_user)return;
+  const ok=confirm('Delete this reel permanently? This cannot be undone.');
+  if(!ok)return;
   await _sb.from('videos').delete().eq('id',videoId).eq('user_id',_user.id);
   try{const path=url.split('/videos/')[1];if(path)await _sb.storage.from('videos').remove([decodeURIComponent(path)]);}catch(e){}
   thumbEl?.remove();toast('Reel deleted');loadRealFeed();
 }
 
 // ── UPLOAD ────────────────────────────────────────────────
-function openUpload(){if(!_user){toast('Sign in to post');return;}openPanel('upload-panel');}
+function openUpload(){if(!_user){showSignInBanner('Sign in to post reels');return;}openPanel('upload-panel');}
 function closeUpload(){
   closePanel('upload-panel');
   const fp=document.getElementById('file-pick');const cap=document.getElementById('upload-caption');
@@ -1144,9 +1167,82 @@ function fileSelected(inp){
   if(fn)fn.textContent=file.name.substring(0,34)+' ('+(file.size/1024/1024).toFixed(1)+'MB)';
   toast('Video selected ✓');
 }
+// ── RECORDING ─────────────────────────────────────────────
+let _mediaRecorder = null, _recordedChunks = [], _recordedBlob = null, _stream = null;
+
+function startRecording() {
+  const preview = document.getElementById('record-preview');
+  const dropZone = document.getElementById('upload-drop-zone');
+  if (preview) preview.style.display = 'flex';
+  if (dropZone) dropZone.style.display = 'none';
+}
+
+async function beginRecord() {
+  try {
+    _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+    const vid = document.getElementById('record-video');
+    if (vid) { vid.srcObject = _stream; vid.muted = true; vid.play(); }
+    _recordedChunks = [];
+    _mediaRecorder = new MediaRecorder(_stream);
+    _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recordedChunks.push(e.data); };
+    _mediaRecorder.onstop = () => {
+      _recordedBlob = new Blob(_recordedChunks, { type: 'video/webm' });
+      const vid = document.getElementById('record-video');
+      if (vid) { vid.srcObject = null; vid.src = URL.createObjectURL(_recordedBlob); vid.muted = false; vid.loop = true; vid.play(); }
+      document.getElementById('btn-use-rec').style.display = 'inline-block';
+      document.getElementById('rec-status').textContent = 'Preview your recording';
+    };
+    _mediaRecorder.start();
+    document.getElementById('btn-start-rec').style.display = 'none';
+    document.getElementById('btn-stop-rec').style.display = 'inline-block';
+    document.getElementById('btn-use-rec').style.display = 'none';
+    // Show recording timer
+    let secs = 0;
+    const timer = setInterval(() => {
+      if (!_mediaRecorder || _mediaRecorder.state !== 'recording') { clearInterval(timer); return; }
+      secs++;
+      const status = document.getElementById('rec-status');
+      if (status) status.textContent = '● REC ' + Math.floor(secs/60).toString().padStart(2,'0') + ':' + (secs%60).toString().padStart(2,'0');
+      if (secs >= 120) { stopRecord(); clearInterval(timer); } // 2 min max
+    }, 1000);
+  } catch(e) {
+    toast('Camera access denied. Please allow camera permissions.');
+    console.error(e);
+  }
+}
+
+function stopRecord() {
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') _mediaRecorder.stop();
+  if (_stream) _stream.getTracks().forEach(t => t.stop());
+  document.getElementById('btn-start-rec').style.display = 'inline-block';
+  document.getElementById('btn-stop-rec').style.display = 'none';
+}
+
+function useRecording() {
+  if (!_recordedBlob) return;
+  // Convert blob to a fake File for the upload function
+  _recordedFile = new File([_recordedBlob], 'recording_' + Date.now() + '.webm', { type: 'video/webm' });
+  cancelRecording();
+  const fn = document.getElementById('upload-file-name');
+  if (fn) fn.textContent = 'Recording ready (' + (_recordedBlob.size/1024/1024).toFixed(1) + 'MB)';
+  toast('Recording ready — add a caption and post!');
+}
+
+function cancelRecording() {
+  if (_stream) _stream.getTracks().forEach(t => t.stop());
+  const preview = document.getElementById('record-preview');
+  if (preview) preview.style.display = 'none';
+  document.getElementById('btn-start-rec').style.display = 'inline-block';
+  document.getElementById('btn-stop-rec').style.display = 'none';
+  document.getElementById('btn-use-rec').style.display = 'none';
+  document.getElementById('rec-status').textContent = '';
+}
+
+let _recordedFile = null;
+
 async function submitUpload(){
   const cap=document.getElementById('upload-caption')?.value.trim();
-  const file=document.getElementById('file-pick')?.files[0];
+  const file=_recordedFile || document.getElementById('file-pick')?.files[0]; _recordedFile=null;
   if(!file){toast('Select a video first');return;}
   if(!cap){toast('Add a caption');return;}
   if(!_user){toast('Sign in to post');return;}
@@ -1199,6 +1295,20 @@ async function adminDelete(videoId,url,rowEl){
 }
 
 // ── TOAST ─────────────────────────────────────────────────
+// ── SIGN IN BANNER ───────────────────────────────────────
+function showSignInBanner(msg) {
+  const b = document.getElementById('signin-banner');
+  if (!b) return;
+  b.querySelector('.signin-banner-msg').textContent = msg;
+  b.style.display = 'flex';
+  setTimeout(() => { b.style.display = 'none'; }, 4000);
+}
+function goToSignUp() {
+  const b = document.getElementById('signin-banner');
+  if (b) b.style.display = 'none';
+  showScreen('auth');
+  setTimeout(() => switchTab('signup'), 100);
+}
 let toastTimer=null;
 function toast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);}
 
