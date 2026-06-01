@@ -2,341 +2,158 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WITZ</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif;}
-
-/* ── NIGHT SKY BASE ── */
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif;background:#060b20;}
 :root{
-  --royal:#1a3a8f;
-  --sky:#4da6ff;
-  --red:#8b0000;
-  --bright-red:#cc2222;
-  --night:#060b20;
-  --surface:#0a1230;
-  --surface2:#111d3a;
-  --muted:#4a6a9f;
-  --white:#f0f8ff;
+  --night:#060b20;--surface:#0a1230;--royal:#1a3a8f;--sky:#4da6ff;
+  --red:#8b0000;--bright:#cc2222;--gold:#c9a84c;--muted:#3a5a7c;
+  --text:#e8dcc8;--white:#ffffff;
 }
 
 /* ── SCREENS ── */
-.screen{position:fixed;inset:0;display:none;background:var(--night);overflow:hidden;}
-.screen.active{display:flex;flex-direction:column;}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;}
+.screen.active{display:flex;}
+canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 
-/* Stars painted on every screen via JS canvas - always behind content */
-.star-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+/* ── SPLASH ── */
+#splash{align-items:center;justify-content:center;background:var(--night);}
+.splash-logo{font-family:'Bebas Neue';font-size:72px;letter-spacing:8px;color:var(--white);text-shadow:0 0 40px rgba(77,166,255,0.5);z-index:1;}
+.splash-tag{font-family:'Barlow Condensed';font-size:13px;letter-spacing:4px;color:var(--sky);margin-top:8px;z-index:1;}
 
-/* All content sits above stars */
-.content-layer{position:relative;z-index:10;width:100%;height:100%;}
+/* ── ONBOARD ── */
+#onboard{background:var(--night);align-items:center;justify-content:flex-end;padding-bottom:60px;}
+.ob-slide{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;gap:20px;text-align:center;}
+.ob-slide.active{display:flex;}
+.ob-icon{width:120px;height:120px;margin-bottom:8px;}
+.ob-title{font-family:'Bebas Neue';font-size:38px;color:var(--white);letter-spacing:3px;}
+.ob-body{font-size:14px;color:var(--muted);line-height:1.7;max-width:300px;}
+.ob-dots{display:flex;gap:8px;margin-bottom:24px;z-index:2;}
+.ob-dot{width:24px;height:4px;border-radius:2px;background:var(--muted);transition:.3s;}
+.ob-dot.active{background:var(--sky);width:40px;}
+.ob-btns{display:flex;gap:12px;width:100%;max-width:340px;z-index:2;}
+.ob-btn{flex:1;padding:14px;border-radius:10px;border:none;font-family:'Barlow Condensed';font-size:16px;letter-spacing:2px;cursor:pointer;transition:.2s;}
+.ob-btn-skip{background:rgba(26,58,143,0.3);color:var(--muted);}
+.ob-btn-next{background:var(--royal);color:var(--white);}
+.ob-btn-next:active,.ob-btn-skip:active{transform:scale(0.97);}
 
-/* ══════════════════════
-   SPLASH
-══════════════════════ */
-#splash .content-layer{
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:14px;height:100%;
-}
-.splash-icon{width:90px;height:90px;}
-.splash-word{font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;letter-spacing:12px;line-height:1;}
-.splash-sub{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--sky);letter-spacing:5px;text-transform:uppercase;}
-.splash-tag{font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;}
-.loader-wrap{width:60px;height:2px;background:rgba(255,255,255,0.1);border-radius:1px;margin-top:20px;overflow:hidden;}
-.loader-bar{height:100%;background:var(--sky);border-radius:1px;animation:load 2.4s ease forwards;}
-@keyframes load{from{width:0}to{width:100%}}
-
-/* ══════════════════════
-   ONBOARDING
-══════════════════════ */
-#onboard .content-layer{display:flex;flex-direction:column;height:100%;}
-.ob-slides{flex:1;position:relative;}
-.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:40px 32px;opacity:0;transition:opacity 0.4s,transform 0.4s;
-  transform:translateX(40px);pointer-events:none;}
-.ob-slide.active{opacity:1;transform:translateX(0);pointer-events:all;}
-.ob-slide.out{transform:translateX(-40px);}
-.ob-visual{margin-bottom:32px;}
-.ob-title{font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:3px;
-  text-align:center;line-height:1.05;margin-bottom:12px;}
-.ob-title .blue{color:var(--sky);}
-.ob-title .red{color:var(--bright-red);}
-.ob-body{font-size:14px;color:var(--muted);text-align:center;line-height:1.7;max-width:300px;}
-.ob-footer{padding:20px 28px 44px;display:flex;flex-direction:column;align-items:center;gap:16px;}
-.ob-dots{display:flex;gap:8px;}
-.ob-dot{width:8px;height:8px;border-radius:50%;background:#1a2a40;transition:all 0.3s;}
-.ob-dot.active{background:var(--sky);width:24px;border-radius:4px;}
-.ob-btns{display:flex;gap:12px;width:100%;}
-.btn-skip{flex:1;background:transparent;border:1px solid #1a2a40;color:var(--muted);
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;
-  border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;}
-.btn-skip:hover{border-color:var(--sky);color:var(--sky);}
-.btn-next{flex:2;background:var(--royal);border:none;color:#fff;
-  font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;
-  border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;}
-.btn-next:hover{background:var(--sky);}
-.btn-next:active{transform:scale(0.97);}
-
-/* ══════════════════════
-   AUTH
-══════════════════════ */
-#auth .content-layer{display:flex;flex-direction:column;height:100%;}
-.auth-hero{flex:0 0 220px;position:relative;overflow:hidden;display:flex;
-  flex-direction:column;align-items:center;justify-content:center;gap:8px;}
-.auth-hero-canvas{position:absolute;inset:0;pointer-events:none;z-index:1;}
-.auth-hero-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;}
-.auth-witz{font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:8px;}
-.auth-tag{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--sky);letter-spacing:4px;}
-.auth-body{flex:1;background:var(--surface);padding:24px 24px 40px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
-.auth-tabs{display:flex;border-radius:10px;overflow:visible;border:1px solid #0f1e30;min-height:44px;}
-.auth-tab{flex:1;background:transparent;border:none;color:var(--muted);
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;
-  padding:12px;cursor:pointer;transition:all 0.2s;}
-.auth-tab.active{background:var(--royal);color:#fff;}
-.field-wrap{position:relative;}
-.field-label{position:absolute;top:-8px;left:12px;font-size:10px;color:var(--sky);
-  background:var(--surface);padding:0 4px;letter-spacing:1px;
-  font-family:'Barlow Condensed',sans-serif;}
-.auth-input{width:100%;background:#0a1628;border:1px solid #1a2a40;border-radius:10px;
-  padding:14px 16px;color:#fff;font-size:14px;outline:none;transition:border-color 0.2s;}
-.auth-input:focus{border-color:var(--sky);}
-.auth-input::placeholder{color:#334;}
-.btn-enter{width:100%;background:var(--royal);border:none;color:#fff;
-  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;
-  padding:16px;border-radius:12px;cursor:pointer;transition:all 0.2s;margin-top:4px;}
-.btn-enter:hover{background:var(--sky);}
+/* ── AUTH ── */
+#auth{background:var(--night);align-items:center;justify-content:flex-end;padding-bottom:0;}
+.auth-hero{position:absolute;top:0;left:0;right:0;height:45%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.auth-witz{font-family:'Bebas Neue';font-size:56px;letter-spacing:6px;color:var(--white);z-index:1;}
+.auth-tag{font-family:'Barlow Condensed';font-size:11px;letter-spacing:5px;color:var(--sky);z-index:1;}
+.auth-card{background:rgba(10,18,48,0.97);border-radius:20px 20px 0 0;border-top:1px solid #0f1e30;padding:24px 20px 40px;width:100%;max-width:480px;z-index:2;}
+.auth-tabs{display:flex;border-radius:10px;overflow:hidden;border:1px solid #0f1e30;margin-bottom:20px;}
+.auth-tab{flex:1;padding:12px;background:transparent;border:none;color:var(--muted);font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;transition:.2s;}
+.auth-tab.active{background:var(--royal);color:var(--white);}
+.field-wrap{margin-bottom:14px;}
+.field-label{display:block;font-family:'Barlow Condensed';font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:5px;}
+.auth-input{width:100%;background:#080f28;border:1px solid #0f1e30;border-radius:8px;padding:13px 14px;color:var(--text);font-size:14px;outline:none;transition:.2s;}
+.auth-input:focus{border-color:var(--royal);}
+.auth-err{background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:8px;padding:10px 12px;font-size:12px;color:#ff6666;margin-bottom:12px;display:none;}
+.auth-err.show{display:block;}
+.btn-enter{width:100%;padding:15px;background:var(--royal);border:none;border-radius:10px;color:var(--white);font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;transition:.2s;margin-bottom:12px;}
 .btn-enter:active{transform:scale(0.98);}
-.auth-or{text-align:center;font-size:11px;color:#334;letter-spacing:2px;}
-.btn-guest{width:100%;background:transparent;border:1px solid #1a2a40;color:var(--muted);
-  font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;
-  padding:14px;border-radius:12px;cursor:pointer;transition:all 0.2s;}
-.btn-guest:hover{border-color:var(--sky);color:var(--sky);}
-.auth-err{display:none;background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:8px;
-  padding:10px 14px;font-size:12px;color:#ff8888;display:none;}
-.auth-err.show{display:block!important;}
-#field-username-wrap{display:none;}
+.btn-enter:disabled{opacity:0.6;cursor:not-allowed;}
+.auth-links{display:flex;justify-content:space-between;padding:0 2px;margin-bottom:16px;}
+.auth-link{font-size:11px;color:var(--muted);cursor:pointer;letter-spacing:1px;}
+.auth-link:hover{color:var(--sky);}
+.auth-or{text-align:center;font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:12px;}
+.btn-guest{width:100%;padding:13px;background:rgba(26,58,143,0.2);border:1px solid #1a3a8f44;border-radius:10px;color:var(--muted);font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;transition:.2s;}
+.btn-guest:active{transform:scale(0.98);}
 
-/* ══════════════════════
-   MAIN APP
-══════════════════════ */
-#app .content-layer{display:flex;flex-direction:column;height:100%;}
-
-/* Top nav */
-.topnav{height:50px;background:rgba(6,11,32,0.96);display:flex;align-items:center;
-  justify-content:space-between;padding:0 18px;border-bottom:0.5px solid #0f1e30;flex-shrink:0;}
+/* ── APP ── */
+#app{background:var(--night);}
+.content-layer{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;}
+.topnav{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;flex-shrink:0;}
 .topnav-tabs{display:flex;gap:20px;}
-.topnav-tab{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.35);
-  cursor:pointer;padding-bottom:2px;letter-spacing:1px;border:none;background:none;}
-.topnav-tab.active{color:#fff;border-bottom:2px solid var(--sky);}
-.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--sky);letter-spacing:4px;}
-.topnav-right{display:flex;gap:12px;align-items:center;}
-.search-btn{width:32px;height:32px;border-radius:50%;border:1px solid #1a2a40;background:transparent;
-  color:var(--sky);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.search-btn:hover{border-color:var(--sky);}
-.user-av{width:28px;height:28px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);
-  display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;
-  font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;}
-
-/* Reel */
-.reel-wrap{flex:1;position:relative;overflow:hidden;}
-.reel-grad{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,11,32,0.5) 0%,transparent 25%,transparent 55%,rgba(6,11,32,0.95) 100%);z-index:2;pointer-events:none;}
-.reel-info{position:absolute;bottom:14px;left:0;right:72px;padding:0 16px;z-index:10;}
-.reel-user-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
-.reel-av{width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:var(--royal);
-  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;
-  font-weight:700;flex-shrink:0;font-family:'Barlow Condensed',sans-serif;}
-.reel-uname{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#fff;font-weight:700;}
-.follow-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.5);
-  border-radius:20px;padding:3px 10px;font-size:10px;color:#fff;
-  font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
-.follow-btn.following{background:var(--royal);border-color:var(--sky);}
-.reel-cap{font-size:13px;color:rgba(255,255,255,0.88);line-height:1.5;margin-bottom:6px;}
-.reel-sound{display:flex;align-items:center;gap:5px;}
-.sound-dot{width:5px;height:5px;border-radius:50%;background:var(--sky);}
-.sound-txt{font-size:11px;color:rgba(255,255,255,0.5);}
-
-/* Right actions */
-.reel-actions{position:absolute;bottom:14px;right:10px;display:flex;flex-direction:column;
-  align-items:center;gap:18px;z-index:10;}
-.act-col{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
-.act-label{font-size:11px;color:#fff;font-weight:700;font-family:'Barlow Condensed',sans-serif;
-  text-shadow:0 1px 4px rgba(0,0,0,0.6);}
-.act-label.liked{color:#ff4444;}
-.tribal-btn{width:54px;height:54px;display:flex;align-items:center;justify-content:center;
-  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6));transition:transform 0.15s;cursor:pointer;}
+.topnav-tab{background:none;border:none;color:var(--muted);font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;padding:4px 0;border-bottom:2px solid transparent;transition:.2s;}
+.topnav-tab.active{color:var(--white);border-bottom-color:var(--sky);}
+#nav-search-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;}
+#reel-wrap{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;}
+#reel-wrap::-webkit-scrollbar{display:none;}
+.real-reel{position:relative;height:100vh;scroll-snap-align:start;overflow:hidden;background:#000;}
+.reel-av{width:38px;height:38px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:13px;font-weight:700;color:var(--white);flex-shrink:0;}
+.reel-uname{font-family:'Barlow Condensed';font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;}
+.reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
+.act-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.act-label{font-family:'Barlow Condensed';font-size:12px;color:var(--white);letter-spacing:1px;}
+.tribal-btn{width:54px;height:54px;display:flex;align-items:center;justify-content:center;transition:.15s;}
 .tribal-btn:active{transform:scale(0.85);}
-
-/* Bottom nav */
-.bottomnav{height:62px;background:rgba(6,11,32,0.97);border-top:0.5px solid #0f1e30;
-  display:flex;align-items:center;justify-content:space-around;flex-shrink:0;}
+/* ── BOTTOM NAV ── */
+.bottomnav{height:62px;background:rgba(6,11,32,0.97);border-top:0.5px solid #0f1e30;display:flex;align-items:center;justify-content:space-around;padding:0 10px;flex-shrink:0;}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 10px;}
-.nav-lbl{font-size:9px;font-family:'Barlow Condensed',sans-serif;color:#334;letter-spacing:1px;}
+.nav-lbl{font-family:'Barlow Condensed';font-size:9px;letter-spacing:1px;color:var(--muted);}
 .nav-item.active .nav-lbl{color:var(--sky);}
-.nav-plus{width:36px;height:28px;background:var(--royal);border-radius:6px;
-  display:flex;align-items:center;justify-content:center;}
-
-/* ══════════════════════
-   COMMENT SHEET
-══════════════════════ */
-.c-sheet{position:absolute;bottom:0;left:0;right:0;height:0;background:var(--surface);
-  border-radius:20px 20px 0 0;overflow:hidden;transition:height 0.35s cubic-bezier(0.4,0,0.2,1);
-  z-index:30;border-top:1px solid #0f1e30;}
-.c-sheet.open{height:72%;}
-.sheet-handle{width:36px;height:4px;background:#1a2a40;border-radius:2px;margin:10px auto 8px;}
-.sheet-hdr{padding:0 18px 10px;display:flex;justify-content:space-between;align-items:center;
-  border-bottom:0.5px solid #0f1e30;}
-.sheet-title{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--white);letter-spacing:2px;}
-.sheet-badge{background:rgba(77,166,255,0.12);border:1px solid rgba(77,166,255,0.25);
-  color:var(--sky);font-size:10px;padding:2px 8px;border-radius:20px;
-  font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
-.sheet-close{width:28px;height:28px;border-radius:50%;background:#0a1628;border:none;
-  color:#4a6a9f;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.sheet-close:hover{color:#fff;}
-.c-list{overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:14px;
-  max-height:calc(72vh - 150px);}
-.c-item{display:flex;gap:10px;}
-.c-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;
-  align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;
-  font-family:'Barlow Condensed',sans-serif;}
+.nav-post-btn{width:44px;height:44px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+/* ── COMMENT SHEET ── */
+#c-sheet{position:fixed;bottom:0;left:0;right:0;background:#050e25;border-radius:20px 20px 0 0;border-top:1px solid #0f1e30;padding:16px 16px 40px;z-index:30;transform:translateY(100%);transition:.3s ease;max-height:70vh;display:flex;flex-direction:column;}
+#c-sheet.open{transform:translateY(0);}
+.c-handle{width:36px;height:4px;background:#1a3a5a;border-radius:2px;margin:0 auto 14px;}
+.c-title{font-family:'Barlow Condensed';font-size:16px;letter-spacing:2px;color:var(--white);margin-bottom:14px;}
+#c-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin-bottom:12px;}
+#c-list::-webkit-scrollbar{display:none;}
+.c-item{display:flex;gap:10px;align-items:flex-start;}
+.c-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:11px;color:var(--white);flex-shrink:0;}
 .c-body{flex:1;}
-.c-user{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--sky);
-  font-weight:700;margin-bottom:2px;}
-.c-text{font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4;margin-bottom:6px;}
-.c-acts{display:flex;align-items:center;gap:10px;}
-.c-stamp{display:flex;align-items:center;gap:4px;cursor:pointer;border:1px solid #1a2a40;
-  border-radius:20px;padding:3px 8px;color:var(--red);transition:all 0.2s;}
-.c-stamp.on{border-color:var(--bright-red);background:rgba(139,0,0,0.18);color:#ff6666;}
-.c-stamp span{font-size:10px;font-family:'Barlow Condensed',sans-serif;}
-.c-time{font-size:10px;color:#334;}
-.c-reply{font-size:10px;color:#334;cursor:pointer;}
-.c-reply:hover{color:var(--sky);}
-.c-input-row{padding:10px 14px;border-top:0.5px solid #0f1e30;display:flex;gap:8px;align-items:center;}
-.c-input{flex:1;background:#0a1628;border:1px solid #1a2a40;border-radius:20px;
-  padding:9px 14px;color:#fff;font-size:13px;outline:none;transition:border-color 0.2s;}
-.c-input:focus{border-color:var(--sky);}
-.c-post{background:var(--royal);color:#fff;border:none;border-radius:16px;
-  padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;
-  letter-spacing:1px;cursor:pointer;transition:background 0.2s;}
-.c-post:hover{background:var(--sky);}
-.sync-flash{position:absolute;right:12px;bottom:160px;font-size:9px;color:#fff;
-  background:var(--royal);padding:4px 10px;border-radius:10px;opacity:0;
-  transition:opacity 0.3s;z-index:35;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
-.sync-flash.show{opacity:1;}
-
-/* ══════════════════════
-   SEARCH OVERLAY
-══════════════════════ */
-#search-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;}
-#search-panel.open{display:flex;}
-.search-top{display:flex;gap:12px;align-items:center;margin-bottom:20px;}
-.back-btn{width:36px;height:36px;border-radius:50%;border:1px solid #1a2a40;background:transparent;
-  color:var(--sky);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.search-field{flex:1;background:#0a1628;border:1px solid #1a2a40;border-radius:20px;
-  padding:10px 16px;color:#fff;font-size:14px;outline:none;}
-.search-field:focus{border-color:var(--sky);}
-.search-results{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0;}
-.trend-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);
-  letter-spacing:2px;margin-bottom:10px;}
-.trend-item{display:flex;align-items:center;gap:14px;padding:14px 0;
-  border-bottom:0.5px solid #0a1020;cursor:pointer;}
-.trend-item:hover{opacity:0.8;}
-.trend-rank{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#1a2a40;width:28px;}
-.trend-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#fff;font-weight:700;letter-spacing:1px;}
-.trend-count{font-size:11px;color:var(--muted);}
-
-/* ══════════════════════
-   PROFILE
-══════════════════════ */
-#profile-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;overflow-y:auto;}
-#profile-panel.open{display:flex;}
-.profile-hero{min-height:220px;background:var(--night);position:relative;display:flex;
-  flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:20px;overflow:hidden;}
-.profile-hero-canvas{position:absolute;inset:0;pointer-events:none;z-index:1;}
-.profile-hero-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;}
-.profile-back{position:absolute;top:16px;left:16px;z-index:3;width:34px;height:34px;
-  border-radius:50%;background:rgba(26,58,143,0.2);border:none;color:#fff;
-  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.profile-av{width:80px;height:80px;border-radius:50%;border:3px solid var(--royal);
-  background:var(--royal);display:flex;align-items:center;justify-content:center;
-  font-family:'Bebas Neue',sans-serif;font-size:30px;color:#fff;letter-spacing:2px;}
-.profile-name{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;letter-spacing:3px;}
-.profile-handle{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--sky);letter-spacing:1px;}
-.profile-body{background:var(--night);flex:1;padding:20px;}
-.profile-stats{display:flex;justify-content:space-around;padding:16px 0;border-bottom:0.5px solid #0f1e30;margin-bottom:16px;}
-.pstat{display:flex;flex-direction:column;align-items:center;gap:2px;}
-.pstat-num{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;letter-spacing:1px;}
-.pstat-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);letter-spacing:1px;}
-.btn-edit{width:100%;background:transparent;border:1px solid var(--royal);color:var(--sky);
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;
-  padding:12px;border-radius:10px;cursor:pointer;margin-bottom:12px;transition:all 0.2s;}
-.btn-edit:hover{background:var(--royal);color:#fff;}
-.btn-logout{width:100%;background:transparent;border:1px solid #1a2a40;color:#334;
-  font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;
-  padding:12px;border-radius:10px;cursor:pointer;transition:all 0.2s;}
-.btn-logout:hover{border-color:var(--red);color:#ff6666;}
-
-/* ══════════════════════
-   UPLOAD
-══════════════════════ */
-#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:24px;}
-#upload-panel.open{display:flex;}
-.upload-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
-.upload-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;letter-spacing:3px;}
-.upload-close{width:34px;height:34px;border-radius:50%;border:1px solid #1a2a40;background:transparent;
-  color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.upload-close:hover{border-color:var(--sky);color:#fff;}
-.upload-zone{border:2px dashed #1a2a40;border-radius:16px;padding:40px 20px;
-  display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;
-  transition:border-color 0.2s;margin-bottom:20px;text-align:center;}
-.upload-zone:hover{border-color:var(--sky);}
-.upload-zone-txt{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);letter-spacing:1px;}
-.upload-zone-sub{font-size:11px;color:#334;}
-.upload-input{width:100%;background:#0a1628;border:1px solid #1a2a40;border-radius:10px;
-  padding:12px 14px;color:#fff;font-size:14px;outline:none;margin-bottom:12px;}
-.upload-input:focus{border-color:var(--sky);}
-.upload-input::placeholder{color:#334;}
-.btn-upload{width:100%;background:var(--royal);border:none;color:#fff;
-  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;
-  padding:16px;border-radius:12px;cursor:pointer;margin-top:8px;transition:background 0.2s;}
-.btn-upload:hover{background:var(--sky);}
-
-/* ══════════════════════
-   TOAST
-══════════════════════ */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--royal);color:#fff;font-family:'Barlow Condensed',sans-serif;
-  font-size:13px;letter-spacing:1px;padding:10px 20px;border-radius:20px;
-  opacity:0;transition:all 0.3s;z-index:100;white-space:nowrap;pointer-events:none;}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-@keyframes stampPop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
-.pop{animation:stampPop 0.25s ease;}
+.c-user{font-family:'Barlow Condensed';font-size:12px;color:var(--sky);letter-spacing:1px;}
+.c-text{font-size:13px;color:var(--text);line-height:1.4;margin-top:2px;}
+.c-row{display:flex;gap:4px;margin-top:6px;}
+.c-input-row{display:flex;gap:8px;align-items:center;}
+.c-input{flex:1;background:#080f28;border:1px solid #0f1e30;border-radius:20px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;}
+.c-send{background:var(--royal);border:none;border-radius:50%;width:36px;height:36px;color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+/* ── PANELS ── */
+#search-panel,#profile-panel,#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;}
+#search-panel.open,#profile-panel.open,#upload-panel.open{display:flex;}
+#inbox-panel,#admin-panel,#forgot-panel{position:fixed;inset:0;background:#050D1A;z-index:60;flex-direction:column;display:none;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.panel-title{font-family:'Bebas Neue';font-size:24px;letter-spacing:3px;color:var(--white);}
+.panel-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px;}
+/* search */
+.search-input{width:100%;background:#080f28;border:1px solid #0f1e30;border-radius:12px;padding:14px;color:var(--text);font-size:15px;outline:none;margin-bottom:16px;}
+/* profile */
+.profile-av-lg{width:80px;height:80px;border-radius:50%;background:var(--royal);border:3px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:28px;font-weight:700;color:var(--white);margin:0 auto 12px;}
+#profile-name{font-family:'Bebas Neue';font-size:28px;letter-spacing:3px;color:var(--white);text-align:center;}
+#profile-handle{font-family:'Barlow Condensed';font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;}
+.pstats{display:flex;justify-content:center;gap:32px;margin-bottom:24px;}
+.pstat{text-align:center;}
+.pstat-num{font-family:'Bebas Neue';font-size:24px;color:var(--white);}
+.pstat-lbl{font-family:'Barlow Condensed';font-size:10px;letter-spacing:2px;color:var(--muted);}
+.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;flex:1;overflow-y:auto;}
+.profile-thumb{position:relative;aspect-ratio:9/16;background:#0a1230;overflow:hidden;}
+.profile-thumb video{width:100%;height:100%;object-fit:cover;}
+.del-btn{position:absolute;top:4px;right:4px;background:rgba(139,0,0,0.8);border:none;color:#fff;width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.btn-logout{margin-top:16px;padding:13px;border-radius:10px;background:rgba(139,0,0,0.2);border:1px solid var(--red);color:#ff6666;font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;width:100%;}
+/* upload */
+.upload-zone{border:2px dashed #1a3a5a;border-radius:14px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer;}
+.upload-zone-icon{font-size:40px;margin-bottom:8px;}
+.upload-zone-txt{font-family:'Barlow Condensed';font-size:18px;color:var(--text);letter-spacing:1px;}
+.upload-zone-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.upload-caption{width:100%;background:#080f28;border:1px solid #0f1e30;border-radius:10px;padding:12px;color:var(--text);font-size:14px;outline:none;resize:none;height:80px;margin-bottom:16px;}
+.btn-upload{width:100%;padding:15px;background:var(--royal);border:none;border-radius:10px;color:var(--white);font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;transition:.2s;}
+.btn-upload:disabled{opacity:0.6;cursor:not-allowed;}
+/* admin */
+.admin-row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #0f1e30;}
+/* sign-in banner */
+#signin-banner{display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#0a1628;border:1px solid var(--royal);border-radius:12px;padding:14px 16px;z-index:40;align-items:center;justify-content:space-between;gap:12px;}
+.signin-banner-msg{font-size:13px;color:var(--text);}
+.signin-banner-btn{background:var(--royal);border:none;border-radius:8px;padding:8px 16px;color:var(--white);font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;}
+/* toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(10,18,48,0.95);border:1px solid #1a3a5a;border-radius:20px;padding:10px 20px;color:var(--text);font-size:13px;letter-spacing:1px;z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
 </style>
 </head>
 <body>
-<style>
-.real-reel{height:100%;min-height:100vh;width:100%;scroll-snap-align:start;position:relative;overflow:hidden;background:#000;flex-shrink:0;}
-.real-reel video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-#reel-wrap{overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;}
-#reel-wrap::-webkit-scrollbar{display:none;}
-#reel-container{display:flex;flex-direction:column;min-height:100%;}
-.profile-thumb{aspect-ratio:9/16;background:#0d1a2a;position:relative;overflow:hidden;cursor:pointer;}
-.profile-thumb video{width:100%;height:100%;object-fit:cover;}
-.profile-thumb .del-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.8);border:none;color:#ff4444;border-radius:4px;width:22px;height:22px;font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;}
-.profile-thumb:hover .del-btn{display:flex;}
-.admin-row{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid #0d1a2a;}
-</style>
-
-
-<div class="toast" id="toast"></div>
 
 <!-- ══ SPLASH ══ -->
 <div class="screen active" id="splash">
   <canvas class="star-canvas" id="splash-canvas"></canvas>
-  <div class="content-layer">
-    <svg class="splash-icon" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+  <div style="z-index:1;display:flex;flex-direction:column;align-items:center;gap:16px;">
+    <svg width="86" height="86" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
       <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
       <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
       <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
@@ -349,157 +166,117 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
       <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
       <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
     </svg>
-    <div class="splash-word">WITZ</div>
-    <div class="splash-sub">Before Rome. We Were First.</div>
-    <div class="splash-tag">Ancient roots. Modern platform. Your sovereignty.</div>
-    <div class="loader-wrap"><div class="loader-bar"></div></div>
+    <div class="splash-logo">WITZ</div>
+    <div class="splash-tag">BEFORE ROME. WE WERE FIRST.</div>
   </div>
 </div>
 
-<!-- ══ ONBOARDING ══ -->
+<!-- ══ ONBOARD ══ -->
 <div class="screen" id="onboard">
   <canvas class="star-canvas" id="onboard-canvas"></canvas>
-  <div class="content-layer">
-    <div class="ob-slides">
-      <div class="ob-slide active" id="ob-0">
-        <div class="ob-visual">
-          <svg width="160" height="160" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-            <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M43 34 C49 34 53 38 53 43 C53 48 49 52 43 52" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
-            <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
-            <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-            <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-            <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-            <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-          </svg>
-        </div>
-        <div class="ob-title">BEFORE <span class="blue">ROME.</span><br>WE WERE FIRST.</div>
-        <div class="ob-body">WITZ is built on the oldest civilization on earth — the Olmec Xi people. Ancient roots. Modern platform. Your culture. Your sovereignty.</div>
-      </div>
-      <div class="ob-slide" id="ob-1">
-        <div class="ob-visual">
-          <svg width="160" height="160" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-            <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
-            <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
-            <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-            <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-            <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-            <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-          </svg>
-        </div>
-        <div class="ob-title">POST YOUR<br><span class="blue">REEL</span></div>
-        <div class="ob-body">Upload your videos and let the world see your story. Every post is your mark carved into the digital stone — permanent, intentional, yours.</div>
-      </div>
-      <div class="ob-slide" id="ob-2">
-        <div class="ob-visual">
-          <svg width="160" height="160" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-            <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
-            <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
-            <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-            <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-            <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-            <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-          </svg>
-        </div>
-        <div class="ob-title">STAMP THE<br><span class="red">MOVEMENT</span></div>
-        <div class="ob-body">The Marquesan Cross is your stamp of approval. Stamp a comment and it syncs to the reel. One mark. Total connection.</div>
-      </div>
-      <div class="ob-slide" id="ob-3">
-        <div class="ob-visual">
-          <svg width="160" height="160" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-            <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
-            <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
-            <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-            <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-            <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-            <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-          </svg>
-        </div>
-        <div class="ob-title">YOUR DATA<br><span class="blue">STAYS</span> YOURS</div>
-        <div class="ob-body">WITZ never sells your data. Your profile, your reels, your stamps — secured and owned by you. Built on sovereignty from day one.</div>
-      </div>
-    </div>
-    <div class="ob-footer">
-      <div class="ob-dots">
-        <div class="ob-dot active"></div><div class="ob-dot"></div>
-        <div class="ob-dot"></div><div class="ob-dot"></div>
-      </div>
-      <div class="ob-btns">
-        <button class="btn-skip" id="btn-skip">SKIP</button>
-        <button class="btn-next" id="btn-next">NEXT</button>
-      </div>
-    </div>
+  <div class="ob-slide active" id="ob0">
+    <svg class="ob-icon" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
+      <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
+      <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
+      <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
+      <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
+      <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
+    </svg>
+    <div class="ob-title">BEFORE ROME</div>
+    <div class="ob-body">WITZ is built on the oldest civilization on earth — the Olmec Xi people. Ancient roots. Modern platform. Your culture. Your sovereignty.</div>
+  </div>
+  <div class="ob-slide" id="ob1">
+    <svg class="ob-icon" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
+      <polygon points="43,14 52,27 68,27 56,37 61,52 43,43 25,52 30,37 18,27 34,27" fill="#142d6e" stroke="#8b0000" stroke-width="1.2"/>
+      <circle cx="43" cy="43" r="3.5" fill="#ff2222"/>
+    </svg>
+    <div class="ob-title">STAMP YOUR MARK</div>
+    <div class="ob-body">The Marquesan Cross is your stamp of approval. Stamp a reel and it echoes across the platform. One mark. Total connection.</div>
+  </div>
+  <div class="ob-slide" id="ob2">
+    <svg class="ob-icon" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
+      <circle cx="43" cy="43" r="32" fill="none" stroke="#8b0000" stroke-width="5.5"/>
+      <circle cx="43" cy="43" r="27" fill="#0f2255"/>
+      <path d="M33 43 Q33 36 43 36 Q53 36 53 43 Q53 48 48 50 L48 55 L43 50 Q33 50 33 43Z" fill="#fff"/>
+      <circle cx="38" cy="43" r="2" fill="#1a3a8f"/><circle cx="43" cy="43" r="2" fill="#1a3a8f"/><circle cx="48" cy="43" r="2" fill="#1a3a8f"/>
+    </svg>
+    <div class="ob-title">YOUR VOICE</div>
+    <div class="ob-body">Post reels, drop comments, build your following. This is your platform — ancient energy, modern reach.</div>
+  </div>
+  <div class="ob-slide" id="ob3">
+    <svg class="ob-icon" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
+      <line x1="43" y1="10" x2="43" y2="76" stroke="#4da6ff" stroke-width="2"/>
+      <line x1="10" y1="43" x2="76" y2="43" stroke="#4da6ff" stroke-width="2"/>
+      <circle cx="43" cy="43" r="12" fill="#1a3a8f" stroke="#8b0000" stroke-width="2"/>
+      <circle cx="43" cy="43" r="5" fill="#ff2222"/>
+    </svg>
+    <div class="ob-title">SOVEREIGN</div>
+    <div class="ob-body">Own your content. Own your identity. WITZ gives the power back to the people who were always first.</div>
+  </div>
+  <div class="ob-dots">
+    <div class="ob-dot active" id="dot0"></div>
+    <div class="ob-dot" id="dot1"></div>
+    <div class="ob-dot" id="dot2"></div>
+    <div class="ob-dot" id="dot3"></div>
+  </div>
+  <div class="ob-btns">
+    <button class="ob-btn ob-btn-skip" id="btn-skip">SKIP</button>
+    <button class="ob-btn ob-btn-next" id="btn-next">NEXT</button>
   </div>
 </div>
 
 <!-- ══ AUTH ══ -->
 <div class="screen" id="auth">
-  <div class="content-layer">
-    <div class="auth-hero">
-      <canvas class="auth-hero-canvas" id="auth-canvas"></canvas>
-      <div class="auth-hero-content">
-        <svg width="60" height="60" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-          <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-          <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
-          <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
-          <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-          <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-          <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-          <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-        </svg>
-        <div class="auth-witz">WITZ</div>
-        <div class="auth-tag">BEFORE ROME. WE WERE FIRST.</div>
-      </div>
+  <canvas class="star-canvas" id="auth-canvas"></canvas>
+  <div class="auth-hero">
+    <svg width="64" height="64" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
+      <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
+      <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
+      <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
+      <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
+      <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
+    </svg>
+    <div class="auth-witz">WITZ</div>
+    <div class="auth-tag">BEFORE ROME. WE WERE FIRST.</div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">LOGIN</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">SIGN UP</button>
     </div>
-    <div class="auth-body">
-      <div id="auth-err" class="auth-err"></div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">LOGIN</button>
-        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">SIGN UP</button>
-      </div>
-      <div class="field-wrap" id="field-username-wrap">
-        <span class="field-label">USERNAME</span>
-        <input class="auth-input" type="text" id="input-username" placeholder="@yourname">
-      </div>
-      <div class="field-wrap">
-        <span class="field-label">EMAIL</span>
-        <input class="auth-input" type="email" id="input-email" placeholder="you@email.com">
-      </div>
-      <div class="field-wrap">
-        <span class="field-label">PASSWORD</span>
-        <input class="auth-input" type="password" id="input-password" placeholder="••••••••">
-      </div>
-      <button class="btn-enter" id="btn-auth" onclick="authSubmit()">ENTER</button>
-      <div style="text-align:center;margin-top:8px;display:flex;justify-content:space-between;padding:0 4px;">
-        <span onclick="openForgot()" style="font-size:11px;color:#3a5a7c;cursor:pointer;letter-spacing:1px;">FORGOT PASSWORD?</span>
-        <span onclick="switchTab('signup')" style="font-size:11px;color:#4a9eff;cursor:pointer;letter-spacing:1px;">NEW? JOIN WITZ →</span>
-      </div>
-      <div class="auth-or">— OR —</div>
-      <button class="btn-guest" id="btn-guest">CONTINUE AS GUEST</button>
+    <div class="field-wrap" id="uname-wrap" style="display:none;">
+      <span class="field-label">USERNAME</span>
+      <input class="auth-input" type="text" id="input-username" placeholder="@yourname" autocomplete="off">
     </div>
+    <div class="field-wrap">
+      <span class="field-label">EMAIL</span>
+      <input class="auth-input" type="email" id="input-email" placeholder="you@email.com" autocomplete="email">
+    </div>
+    <div class="field-wrap">
+      <span class="field-label">PASSWORD</span>
+      <input class="auth-input" type="password" id="input-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-enter" id="btn-auth" onclick="authSubmit()">ENTER</button>
+    <div class="auth-links">
+      <span class="auth-link" onclick="openForgot()">FORGOT PASSWORD?</span>
+      <span class="auth-link" style="color:#4da6ff;" onclick="switchTab('signup')">NEW? JOIN WITZ →</span>
+    </div>
+    <div class="auth-or">— OR —</div>
+    <button class="btn-guest" onclick="guestMode()">CONTINUE AS GUEST</button>
   </div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
+<!-- ══ APP ══ -->
 <div class="screen" id="app">
   <canvas class="star-canvas" id="app-canvas"></canvas>
   <div class="content-layer">
@@ -508,547 +285,401 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
         <button class="topnav-tab" onclick="switchFeed(this,'following')">FOLLOWING</button>
         <button class="topnav-tab active" onclick="switchFeed(this,'foryou')">FOR YOU</button>
       </div>
-      <div class="topnav-logo">WITZ</div>
-      <div class="topnav-right">
-        <button class="search-btn" onclick="openSearch()">
-          <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="#4da6ff" stroke-width="1.4"/><line x1="8.5" y1="8.5" x2="13" y2="13" stroke="#4da6ff" stroke-width="1.4" stroke-linecap="round"/></svg>
-        </button>
-        <div class="user-av" id="nav-av" onclick="openProfile()">WZ</div>
-      </div>
+      <span style="font-family:'Bebas Neue';font-size:22px;letter-spacing:4px;color:#fff;">WITZ</span>
+      <button id="nav-search-btn" onclick="openSearch()">
+        <svg width="20" height="20" fill="none" stroke="#3a5a7c" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
     </div>
-    <div class="reel-wrap" id="reel-wrap">
-      <div id="reel-container"></div>
-      <div class="reel-grad" style="pointer-events:none;display:none;"></div>
-      <div class="reel-info">
-        <div class="reel-user-row">
-          <div class="reel-av" id="reel-av">NA</div>
-          <span class="reel-uname" id="reel-uname">@native_arts</span>
-          <button class="follow-btn" id="btn-follow" onclick="toggleFollow()">+ FOLLOW</button>
-        </div>
-        <div class="reel-cap" id="reel-cap">The beadwork pattern that started a movement — part 3 of the series</div>
-        <div class="reel-sound"><div class="sound-dot"></div><span class="sound-txt" id="reel-sound">original sound · native_arts</span></div>
-      </div>
-      <div class="reel-actions">
-        <!-- LIKE: Marquesan Cross -->
-        <div class="act-col" onclick="tapLike()">
-          <div class="tribal-btn" id="like-btn">
-            <svg id="like-svg" width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
-              <polygon points="43,14 52,27 68,27 56,37 61,52 43,43 25,52 30,37 18,27 34,27" fill="#142d6e" stroke="#8b0000" stroke-width="1.2"/>
-              <polygon points="43,24 48,33 59,33 51,39 54,50 43,44 32,50 35,39 27,33 38,33" fill="#0f2255" stroke="#8b0000" stroke-width="0.8"/>
-              <line x1="43" y1="4" x2="43" y2="24" stroke="#4da6ff" stroke-width="2" id="lv1"/>
-              <line x1="43" y1="64" x2="43" y2="82" stroke="#4da6ff" stroke-width="2" id="lv2"/>
-              <line x1="4" y1="43" x2="22" y2="43" stroke="#4da6ff" stroke-width="2" id="lh1"/>
-              <line x1="64" y1="43" x2="82" y2="43" stroke="#4da6ff" stroke-width="2" id="lh2"/>
-              <line x1="14" y1="14" x2="27" y2="27" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round" id="ld1"/>
-              <line x1="59" y1="59" x2="72" y2="72" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round" id="ld2"/>
-              <line x1="72" y1="14" x2="59" y2="27" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round" id="ld3"/>
-              <line x1="14" y1="72" x2="27" y2="59" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round" id="ld4"/>
-              <rect x="38" y="38" width="10" height="10" rx="1" fill="#8b0000" transform="rotate(45 43 43)" id="lcenter"/>
-              <circle cx="43" cy="43" r="3.5" fill="#ff2222" id="lcircle"/>
-              <circle cx="43" cy="5" r="2.5" fill="#4da6ff"/>
-              <circle cx="43" cy="81" r="2.5" fill="#4da6ff"/>
-              <circle cx="5" cy="43" r="2.5" fill="#4da6ff"/>
-              <circle cx="81" cy="43" r="2.5" fill="#4da6ff"/>
-            </svg>
-          </div>
-          <span class="act-label" id="like-count">4.2K</span>
-        </div>
-        <!-- COMMENT: Sun Shield -->
-        <div class="act-col" onclick="openComments()">
-          <div class="tribal-btn">
-            <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
-              <circle cx="43" cy="43" r="32" fill="none" stroke="#8b0000" stroke-width="5.5"/>
-              <circle cx="43" cy="43" r="27" fill="#0f2255"/>
-              <line x1="43" y1="11" x2="43" y2="21" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-              <line x1="43" y1="65" x2="43" y2="75" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-              <line x1="11" y1="43" x2="21" y2="43" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-              <line x1="65" y1="43" x2="75" y2="43" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-              <line x1="19" y1="19" x2="26" y2="26" stroke="#4da6ff" stroke-width="2.2" stroke-linecap="round"/>
-              <line x1="60" y1="60" x2="67" y2="67" stroke="#4da6ff" stroke-width="2.2" stroke-linecap="round"/>
-              <line x1="67" y1="19" x2="60" y2="26" stroke="#4da6ff" stroke-width="2.2" stroke-linecap="round"/>
-              <line x1="19" y1="67" x2="26" y2="60" stroke="#4da6ff" stroke-width="2.2" stroke-linecap="round"/>
-              <path d="M33 43 Q33 36 43 36 Q53 36 53 43 Q53 48 48 50 L48 55 L43 50 Q33 50 33 43Z" fill="#fff"/>
-              <circle cx="38" cy="43" r="2" fill="#1a3a8f"/>
-              <circle cx="43" cy="43" r="2" fill="#1a3a8f"/>
-              <circle cx="48" cy="43" r="2" fill="#1a3a8f"/>
-            </svg>
-          </div>
-          <span class="act-label" id="comment-count">127</span>
-        </div>
-        <!-- SHARE: Koru -->
-        <div class="act-col" onclick="shareReel()">
-          <div class="tribal-btn">
-            <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
-              <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
-              <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
-              <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>
-              <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#4da6ff" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 2"/>
-              <circle cx="43" cy="43" r="5" fill="#cc2222"/><circle cx="43" cy="43" r="2.5" fill="#ff4444"/>
-              <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
-              <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
-              <path d="M8 43 L14 41 L12 43 L14 45 Z" fill="#4da6ff"/>
-              <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
-            </svg>
-          </div>
-          <span class="act-label" id="share-count">348</span>
-        </div>
-        <!-- Creator avatar -->
-        <div class="act-col" onclick="openProfile()">
-          <div style="width:38px;height:38px;border-radius:50%;border:2px solid #fff;background:var(--royal);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700;font-family:'Barlow Condensed',sans-serif;" id="reel-creator-av">NA</div>
-        </div>
-      </div>
-      <div class="sync-flash" id="sync-flash">STAMP SYNCED</div>
-      <!-- Comment sheet -->
-      <div class="c-sheet" id="c-sheet">
-        <div class="sheet-handle"></div>
-        <div class="sheet-hdr">
-          <span class="sheet-title">COMMENTS</span>
-          <span class="sheet-badge" id="c-badge">127</span>
-          <button class="sheet-close" onclick="closeComments()">✕</button>
-        </div>
-        <div class="c-list" id="c-list">
-          <div class="c-item"><div class="c-av" style="background:#1a3a8f;">JB</div><div class="c-body"><div class="c-user">@jay_beats</div><div class="c-text">The detail on this is insane how long did this take you</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,0)"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs0">23</span></div><span class="c-reply">Reply</span><span class="c-time">2h</span></div></div></div>
-          <div class="c-item"><div class="c-av" style="background:#8b0000;">SR</div><div class="c-body"><div class="c-user">@soleil_r</div><div class="c-text">Gave my stamp to this — absolute art form on WITZ</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,1)"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs1">58</span></div><span class="c-reply">Reply</span><span class="c-time">45m</span></div></div></div>
-          <div class="c-item"><div class="c-av" style="background:#0f4c2a;">MN</div><div class="c-body"><div class="c-user">@myke_n</div><div class="c-text">The mountain stands fr. WITZ different</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,2)"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs2">11</span></div><span class="c-reply">Reply</span><span class="c-time">12m</span></div></div></div>
-        </div>
-        <div class="c-input-row">
-          <input class="c-input" id="c-input" type="text" placeholder="Add a comment...">
-          <button class="c-post" onclick="postComment()">POST</button>
-        </div>
-      </div>
-    </div>
+    <div id="reel-wrap"></div>
     <div class="bottomnav">
-      <div class="nav-item active" onclick="navTo(this,'home')">
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 9L10 2l8 7v9H13v-5H7v5H2z" fill="#4da6ff"/></svg>
-        <span class="nav-lbl" style="color:#4da6ff;">HOME</span>
+      <div class="nav-item active" id="nav-home" onclick="navTo(this,'home')">
+        <svg width="20" height="20" fill="#4da6ff" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9v9h-6v-6H9v6H3z"/></svg>
+        <span class="nav-lbl">HOME</span>
       </div>
-      <div class="nav-item" onclick="navTo(this,'discover')">
-        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5.5" fill="none" stroke="#334" stroke-width="1.5"/><line x1="13.5" y1="13.5" x2="19" y2="19" stroke="#334" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div class="nav-item" id="nav-discover" onclick="navTo(this,'discover')">
+        <svg width="20" height="20" fill="none" stroke="#3a5a7c" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <span class="nav-lbl">DISCOVER</span>
       </div>
-      <div class="nav-item" onclick="openUpload()">
-        <div class="nav-plus"><svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="1" x2="7" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="nav-post-btn" onclick="openUpload()">
+        <svg width="22" height="22" fill="#fff" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
       </div>
-      <div class="nav-item" onclick="openInbox()">
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 4h16v10H11l-4 4v-4H2z" fill="none" stroke="#334" stroke-width="1.4"/></svg>
+      <div class="nav-item" id="nav-inbox" onclick="openInbox()">
+        <svg width="20" height="20" fill="none" stroke="#3a5a7c" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span class="nav-lbl">INBOX</span>
       </div>
-      <div class="nav-item" onclick="openProfile()">
-        <div id="bottomnav-av" style="width:20px;height:20px;border-radius:50%;background:#1a3a8f;border:1.5px solid #4da6ff;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;">WZ</div>
+      <div class="nav-item" id="nav-profile" onclick="openProfile()">
+        <div id="bottomnav-av" style="width:22px;height:22px;border-radius:50%;background:#1a3a8f;border:1.5px solid #4da6ff;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-family:'Barlow Condensed';">WZ</div>
         <span class="nav-lbl">ME</span>
       </div>
     </div>
   </div>
+  <!-- comment sheet -->
+  <div id="c-sheet">
+    <div class="c-handle"></div>
+    <div class="c-title">COMMENTS</div>
+    <div id="c-list"></div>
+    <div class="c-input-row">
+      <input class="c-input" id="c-input" type="text" placeholder="Add a comment...">
+      <button class="c-send" onclick="postComment()">›</button>
+    </div>
+  </div>
+  <!-- sign in banner -->
+  <div id="signin-banner">
+    <span class="signin-banner-msg" id="signin-banner-msg">Sign in to interact</span>
+    <button class="signin-banner-btn" onclick="goSignUp()">JOIN WITZ</button>
+  </div>
+  <!-- admin btn hidden unless owner -->
+  <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:50px;right:12px;background:#8b0000;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
 </div>
 
-<!-- ══ SEARCH ══ -->
+<!-- ══ SEARCH PANEL ══ -->
 <div id="search-panel">
-  <canvas class="star-canvas" id="search-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:0;"></canvas>
-  <div style="position:relative;z-index:2;display:flex;flex-direction:column;flex:1;overflow:hidden;">
-    <div class="search-top">
-      <button class="back-btn" onclick="closeSearch()">←</button>
-      <input class="search-field" id="search-field" type="text" placeholder="Search creators, sounds, tags...">
-    </div>
-    <div class="search-results">
-      <div class="trend-label">TRENDING ON WITZ</div>
-      <div class="trend-item" onclick="toast('Exploring #olmec')"><div class="trend-rank">1</div><div><div class="trend-name">#olmec</div><div class="trend-count">24.6K reels</div></div></div>
-      <div class="trend-item" onclick="toast('Exploring #ancientnow')"><div class="trend-rank">2</div><div><div class="trend-name">#ancientnow</div><div class="trend-count">18.2K reels</div></div></div>
-      <div class="trend-item" onclick="toast('Exploring #witzstamp')"><div class="trend-rank">3</div><div><div class="trend-name">#witzstamp</div><div class="trend-count">12.8K reels</div></div></div>
-      <div class="trend-item" onclick="toast('Exploring #sacredmountain')"><div class="trend-rank">4</div><div><div class="trend-name">#sacredmountain</div><div class="trend-count">9.1K reels</div></div></div>
-      <div class="trend-item" onclick="toast('Exploring #xipeoples')"><div class="trend-rank">5</div><div><div class="trend-name">#xipeoples</div><div class="trend-count">7.4K reels</div></div></div>
-      <div class="trend-item" onclick="toast('Exploring #beforerome')"><div class="trend-rank">6</div><div><div class="trend-name">#beforerome</div><div class="trend-count">5.9K reels</div></div></div>
-    </div>
+  <div class="panel-header">
+    <span class="panel-title">DISCOVER</span>
+    <button class="panel-close" onclick="closeSearch()">✕</button>
   </div>
+  <input class="search-input" id="search-field" placeholder="Search users, reels...">
+  <div id="search-results" style="color:#3a5a7c;font-size:12px;letter-spacing:2px;">TYPE TO SEARCH</div>
 </div>
 
-<!-- ══ PROFILE ══ -->
+<!-- ══ PROFILE PANEL ══ -->
 <div id="profile-panel">
-  <div class="profile-hero">
-    <canvas class="profile-hero-canvas" id="profile-canvas"></canvas>
-    <button class="profile-back" onclick="closeProfile()">←</button>
-    <div class="profile-hero-content">
-      <div class="profile-av" id="profile-av">WZ</div>
-      <div class="profile-name" id="profile-name">WARRIOR</div>
-      <div class="profile-handle" id="profile-handle">@witz_user</div>
-    </div>
+  <div class="panel-header">
+    <span class="panel-title">PROFILE</span>
+    <button class="panel-close" onclick="closeProfile()">✕</button>
   </div>
-  <div class="profile-body">
-    <div class="profile-stats">
-      <div class="pstat"><div class="pstat-num">0</div><div class="pstat-lbl">REELS</div></div>
-      <div class="pstat"><div class="pstat-num">0</div><div class="pstat-lbl">FOLLOWERS</div></div>
-      <div class="pstat"><div class="pstat-num">0</div><div class="pstat-lbl">FOLLOWING</div></div>
-    </div>
-    <button class="btn-edit" onclick="toast('Edit profile — coming soon')">EDIT PROFILE</button>
-    <button id="btn-admin" onclick="openAdmin()" style="display:none;width:100%;background:#1a0000;border:1px solid #8b0000;color:#ff6666;padding:10px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;cursor:pointer;margin-bottom:8px;">⚡ ADMIN PANEL</button>
-    <button class="btn-logout" onclick="logout()">LOG OUT</button>
-    <div style="padding:10px 0 4px;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:#3a5a7c;border-top:1px solid #1a2a40;margin-top:10px;">MY REELS</div>
-    <div id="profile-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;"></div>
+  <div class="profile-av-lg" id="profile-av">WZ</div>
+  <div id="profile-name">WARRIOR</div>
+  <div id="profile-handle">@warrior</div>
+  <div class="pstats">
+    <div class="pstat"><div class="pstat-num" id="pstat-reels">0</div><div class="pstat-lbl">REELS</div></div>
+    <div class="pstat"><div class="pstat-num" id="pstat-likes">0</div><div class="pstat-lbl">STAMPS</div></div>
   </div>
+  <div class="profile-grid" id="profile-grid"></div>
+  <button class="btn-logout" onclick="logout()">SIGN OUT</button>
 </div>
 
-<!-- ══ UPLOAD ══ -->
+<!-- ══ UPLOAD PANEL ══ -->
 <div id="upload-panel">
-  <canvas class="star-canvas" id="upload-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:0;"></canvas>
-  <div style="position:relative;z-index:2;display:flex;flex-direction:column;flex:1;">
-    <div class="upload-hdr">
-      <div class="upload-title">POST REEL</div>
-      <button class="upload-close" onclick="closeUpload()">✕</button>
+  <div class="panel-header">
+    <span class="panel-title">POST A REEL</span>
+    <button class="panel-close" onclick="closeUpload()">✕</button>
+  </div>
+  <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
+    <div class="upload-zone-icon">🎬</div>
+    <div class="upload-zone-txt">TAP TO SELECT VIDEO</div>
+    <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 200MB</div>
+    <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
+  </div>
+  <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..."></textarea>
+  <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
+</div>
+
+<!-- ══ INBOX PANEL ══ -->
+<div id="inbox-panel">
+  <div style="padding:20px;">
+    <div class="panel-header">
+      <span class="panel-title">INBOX</span>
+      <button class="panel-close" onclick="closeInbox()">✕</button>
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:12px;">
-      <button onclick="startRecording()" style="flex:1;background:var(--deep);border:1px solid var(--gold,#C9A84C);border-radius:10px;padding:14px 8px;color:var(--gold,#C9A84C);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;"><span style="font-size:26px;">🎥</span>RECORD</button>
-      <button onclick="document.getElementById('file-pick').click()" style="flex:1;background:var(--deep);border:1px solid #1a3a6e;border-radius:10px;padding:14px 8px;color:var(--text,#F0EDE8);font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;"><span style="font-size:26px;">📁</span>CHOOSE FILE</button>
+    <div id="inbox-list" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;gap:12px;">
+      <div style="font-size:40px;">💬</div>
+      <div>MESSAGES COMING SOON</div>
     </div>
-    <div id="record-preview" style="display:none;flex-direction:column;align-items:center;gap:8px;margin-bottom:10px;">
-      <video id="record-video" style="width:100%;max-height:180px;border-radius:10px;background:#000;" autoplay muted playsinline></video>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-        <button id="btn-start-rec" onclick="beginRecord()" style="background:#8b0000;border:none;border-radius:6px;padding:8px 16px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">● REC</button>
-        <button id="btn-stop-rec" onclick="stopRecord()" style="display:none;background:#333;border:none;border-radius:6px;padding:8px 16px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:12px;cursor:pointer;">■ STOP</button>
-        <button id="btn-use-rec" onclick="useRecording()" style="display:none;background:#C9A84C;border:none;border-radius:6px;padding:8px 16px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">USE THIS ✓</button>
-        <button onclick="cancelRecording()" style="background:none;border:1px solid #333;border-radius:6px;padding:8px 12px;color:#888;font-family:'Barlow Condensed',sans-serif;font-size:11px;cursor:pointer;">CANCEL</button>
-      </div>
-      <div id="rec-status" style="font-size:11px;color:#C9A84C;letter-spacing:1px;"></div>
+  </div>
+</div>
+
+<!-- ══ ADMIN PANEL ══ -->
+<div id="admin-panel">
+  <div style="padding:20px;display:flex;flex-direction:column;height:100%;">
+    <div class="panel-header">
+      <span class="panel-title">ADMIN</span>
+      <button class="panel-close" onclick="closeAdmin()">✕</button>
     </div>
-    <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
-      <svg width="48" height="48" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg" opacity="0.4">
-        <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-        <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
-        <circle cx="43" cy="43" r="5" fill="#8b0000"/>
-      </svg>
-      <div class="upload-zone-txt">TAP TO SELECT VIDEO</div>
-      <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 500MB</div>
-    </div>
-    <input type="file" id="file-pick" accept="video/*" style="display:none" onchange="fileSelected(this)">
-    <input class="upload-input" type="text" id="upload-caption" placeholder="Write your caption...">
-    <input class="upload-input" type="text" id="upload-sound" placeholder="Sound name (optional)">
-    <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
+    <div id="admin-list" style="flex:1;overflow-y:auto;"></div>
   </div>
 </div>
 
-
-<!-- CAMERA INPUT -->
-<input type="file" id="file-pick-camera" accept="video/*" capture="environment" style="display:none" onchange="fileSelected(this)">
-
-<!-- SIGN IN BANNER -->
-<div id="signin-banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:999;background:#0A1F3F;border:1px solid #C9A84C;border-radius:10px;padding:14px 18px;min-width:260px;max-width:320px;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.6);">
-  <div class="signin-banner-msg" style="font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;color:#F0EDE8;text-align:center;">Sign in to continue</div>
-  <button onclick="goToSignUp()" style="background:#C9A84C;border:none;border-radius:6px;padding:9px 24px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;font-weight:700;cursor:pointer;width:100%;">CREATE ACCOUNT / SIGN IN</button>
-  <span onclick="document.getElementById('signin-banner').style.display='none'" style="font-size:11px;color:#5a7a9c;cursor:pointer;letter-spacing:1px;">DISMISS</span>
-</div>
-
-<!-- INBOX PANEL -->
-<div id="inbox-panel" style="display:none;position:fixed;inset:0;background:#050D1A;z-index:50;flex-direction:column;">
-  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #1a2a40;flex-shrink:0;">
-    <button onclick="closeInbox()" style="background:none;border:1px solid #1a2a40;color:#7a9cc6;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px;">←</button>
-    <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:3px;color:#e8dcc8;flex:1;">INBOX</span>
-  </div>
-  <div id="inbox-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3a5a7c;gap:12px;font-size:13px;letter-spacing:2px;">
-    <div style="font-size:36px;">📭</div><div>NO MESSAGES YET</div>
+<!-- ══ FORGOT PW PANEL ══ -->
+<div id="forgot-panel">
+  <div style="padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;">
+    <div style="font-family:'Bebas Neue';font-size:28px;letter-spacing:3px;color:#fff;">RESET PASSWORD</div>
+    <input id="forgot-email" type="email" placeholder="your@email.com" style="width:100%;max-width:360px;padding:13px;background:#0a1628;border:1px solid #1a3a5a;border-radius:10px;color:#e8dcc8;font-size:14px;outline:none;">
+    <div id="forgot-msg" style="font-size:12px;color:#ff4444;min-height:16px;text-align:center;"></div>
+    <button onclick="sendReset()" style="width:100%;max-width:360px;padding:14px;background:#1a3a8f;border:none;border-radius:10px;color:#fff;font-family:'Bebas Neue';font-size:18px;letter-spacing:3px;cursor:pointer;">SEND RESET LINK</button>
+    <button onclick="closeForgot()" style="background:none;border:none;color:#3a5a7c;cursor:pointer;font-size:13px;letter-spacing:1px;">BACK</button>
   </div>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="admin-panel" style="display:none;position:fixed;inset:0;background:#050D1A;z-index:60;flex-direction:column;">
-  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #1a2a40;flex-shrink:0;">
-    <button onclick="closeAdmin()" style="background:none;border:1px solid #1a2a40;color:#7a9cc6;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px;">←</button>
-    <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:3px;color:#e8dcc8;flex:1;">⚡ ADMIN</span>
-    <button onclick="adminLoadAll()" style="background:#1a3a5a;border:none;color:#7a9cc6;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">REFRESH</button>
-  </div>
-  <div id="admin-list" style="flex:1;overflow-y:auto;"></div>
-</div>
-
-<!-- FORGOT PW PANEL -->
-<div id="forgot-panel" style="display:none;position:fixed;inset:0;background:#050D1A;z-index:60;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:14px;padding:28px 22px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;">
-    <button onclick="closeForgot()" style="background:none;border:none;color:#5a7a9c;font-size:13px;cursor:pointer;letter-spacing:1px;text-align:left;">← BACK</button>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:3px;color:#e8dcc8;text-align:center;">RESET PASSWORD</div>
-    <div style="font-size:12px;color:#5a7a9c;text-align:center;line-height:1.5;">Enter your email and we'll send a reset link.</div>
-    <input id="forgot-email" type="email" placeholder="your@email.com" style="padding:12px;background:#0a1628;border:1px solid #1a3a5a;border-radius:8px;color:#e8dcc8;font-size:14px;outline:none;width:100%;box-sizing:border-box;">
-    <div id="forgot-msg" style="font-size:12px;text-align:center;min-height:16px;color:#ff4444;"></div>
-    <button onclick="sendResetEmail()" style="background:#C9A84C;border:none;border-radius:8px;padding:13px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;font-weight:700;cursor:pointer;">SEND RESET LINK</button>
-  </div>
-</div>
-
+<!-- ══ TOAST ══ -->
+<div id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════════════════
-// WITZ — Complete Application Script
-// ALL functions defined here, loaded before any user interaction
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const SURL = 'https://mimwbeexqskhefistbvt.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
+const ADMIN = 'aqayali8@gmail.com';
 
-const SUPABASE_URL = 'https://mimwbeexqskhefistbvt.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
-const ADMIN_EMAIL  = 'aqayali8@gmail.com';
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let _sb = null, _user = null, _username = 'WARRIOR', _currentVideoId = null;
+let _authMode = 'login', _obSlide = 0, _toastTimer = null;
 
-// ── Init Supabase ─────────────────────────────────────────
-let _sb, _user = null, _profile = null, _currentVideoId = null, _isMuted = true, _recordedFile = null;
-
-function initSB() {
-  if (!_sb && typeof supabase !== 'undefined') {
-    try {
-      _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch(e) {
-      console.error('Supabase init error:', e);
-      _sb = null;
-    }
+// ═══════════════════════════════════════════════════════
+// SUPABASE INIT — called once, cached
+// ═══════════════════════════════════════════════════════
+function getSB() {
+  if (!_sb) {
+    try { _sb = supabase.createClient(SURL, SKEY); } catch(e) { _sb = null; }
   }
   return _sb;
 }
 
-// ── Auth mode ─────────────────────────────────────────────
-let _authMode = 'login';
-let username = 'WARRIOR';
-
-function switchTab(mode) {
-  _authMode = mode;
-  document.getElementById('tab-login')?.classList.toggle('active', mode === 'login');
-  document.getElementById('tab-signup')?.classList.toggle('active', mode === 'signup');
-  const uw = document.getElementById('field-username-wrap') || document.getElementById('uname-wrap');
-  if (uw) uw.style.setProperty('display', mode === 'signup' ? 'block' : 'none', 'important');
-  const btn = document.getElementById('btn-auth');
-  if (btn) btn.textContent = mode === 'login' ? 'ENTER' : 'JOIN WITZ';
-  const err = document.getElementById('auth-err');
-  if (err) { err.textContent = ''; err.classList.remove('show'); err.style.display='none'; }
-}
-
-// ── Auth submit ───────────────────────────────────────────
-function authSubmit() {
-  const sb = initSB();
-  if (!sb) { toast('Loading... try again'); return; }
-  const email = document.getElementById('input-email')?.value.trim();
-  const pass  = document.getElementById('input-password')?.value;
-  const uname = document.getElementById('input-username')?.value?.trim();
-  const errEl = document.getElementById('auth-err');
-  const btn   = document.getElementById('btn-auth');
-  if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
-  if (!email || !pass) { if (errEl) { errEl.textContent = 'Enter email and password.'; errEl.classList.add('show'); } return; }
-  if (btn) { btn.disabled = true; btn.textContent = 'LOADING...'; }
-
-  if (_authMode === 'signup') {
-    if (!uname || uname.length < 2) {
-      if (errEl) { errEl.textContent = 'Choose a username (2+ chars).'; errEl.classList.add('show'); }
-      if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
-      return;
-    }
-    sb.auth.signUp({ email, password: pass, options: { data: { username: uname } } })
-      .then(({ data, error }) => {
-        if (error) {
-          // If already registered, just try to sign in
-          if (error.message && error.message.toLowerCase().includes('already')) {
-            sb.auth.signInWithPassword({ email, password: pass }).then(({ data: d2, error: e2 }) => {
-              if (e2) { if (errEl) errEl.textContent = 'Account exists — check your password.'; if (btn) { btn.disabled=false; btn.textContent='JOIN WITZ'; } return; }
-              _user = d2.user;
-              sb.from('profiles').select('*').eq('id', _user.id).single().then(({ data: prof }) => {
-                _profile = prof; username = (prof?.username || email.split('@')[0]).toUpperCase(); enterApp();
-              }).catch(() => { username = uname.toUpperCase(); enterApp(); });
-            });
-            return;
-          }
-          if (errEl) errEl.textContent = error.message;
-          if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
-          return;
-        }
-        // If we got a session immediately (email confirm disabled in Supabase)
-        if (data.session) {
-          _user = data.user;
-          sb.from('profiles').upsert({ id: data.user.id, username: uname }).then(()=>{}).catch(()=>{});
-          _profile = { username: uname };
-          username = uname.toUpperCase();
-          enterApp();
-        } else if (data.user) {
-          // Email confirmation may be required — try signing in anyway
-          sb.auth.signInWithPassword({ email, password: pass }).then(({ data: d2, error: e2 }) => {
-            if (!e2 && d2.session) {
-              _user = d2.user;
-              sb.from('profiles').upsert({ id: d2.user.id, username: uname }).then(()=>{}).catch(()=>{});
-              _profile = { username: uname };
-              username = uname.toUpperCase();
-              enterApp();
-            } else {
-              if (errEl) errEl.textContent = 'Account created! Check your email, then log in.';
-              if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
-              setTimeout(() => switchTab('login'), 3000);
-            }
-          });
-        } else {
-          if (errEl) errEl.textContent = 'Something went wrong. Try again.';
-          if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
-        }
-      });
-  } else {
-    sb.auth.signInWithPassword({ email, password: pass })
-      .then(({ data, error }) => {
-        if (error) {
-          if (errEl) errEl.textContent = error.message;
-          if (btn) { btn.disabled = false; btn.textContent = 'ENTER'; }
-          return;
-        }
-        _user = data.user;
-        sb.from('profiles').select('*').eq('id', _user.id).single()
-          .then(({ data: prof }) => {
-            _profile = prof;
-            username = (prof?.username || email.split('@')[0]).toUpperCase();
-            enterApp();
-          });
-      });
+// ═══════════════════════════════════════════════════════
+// STARS CANVAS
+// ═══════════════════════════════════════════════════════
+function paintStars(canvas) {
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 390;
+  const H = canvas.offsetHeight || 844;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  for (let i=0; i<80; i++) {
+    const x=Math.random()*W, y=Math.random()*H, r=Math.random()*1.2+0.2;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(200,220,255,${Math.random()*0.6+0.2})`; ctx.fill();
   }
+  // infrared sun top-left
+  const grd = ctx.createRadialGradient(60,60,0,60,60,80);
+  grd.addColorStop(0,'rgba(255,120,0,0.9)');
+  grd.addColorStop(0.4,'rgba(220,60,0,0.6)');
+  grd.addColorStop(1,'rgba(139,0,0,0)');
+  ctx.beginPath(); ctx.arc(60,60,80,0,Math.PI*2);
+  ctx.fillStyle=grd; ctx.fill();
 }
 
-// ── Session restore ───────────────────────────────────────
-window.addEventListener('load', () => {
-  // Hard fallback: if nothing happens in 4s, go to onboard
-  const _fallback = setTimeout(() => {
-    if (document.getElementById('splash').classList.contains('active') ||
-        !document.querySelector('.screen.active')) {
-      showScreen('onboard');
-    }
-  }, 4000);
-
-  const sb = initSB();
-  if (!sb) {
-    // supabase library not loaded yet — wait up to 3s for it
-    let attempts = 0;
-    const wait = setInterval(() => {
-      attempts++;
-      const sb2 = initSB();
-      if (sb2) {
-        clearInterval(wait);
-        _doSessionCheck(sb2, _fallback);
-      } else if (attempts > 15) {
-        clearInterval(wait);
-        clearTimeout(_fallback);
-        showScreen('onboard');
-      }
-    }, 200);
-    return;
-  }
-  _doSessionCheck(sb, _fallback);
-});
-
-function _doSessionCheck(sb, _fallback) {
-  // Clear any saved Supabase session from localStorage directly — no API call needed
-  // This guarantees every visitor sees splash → onboard → auth regardless of prior session
-  try {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('sb-')) localStorage.removeItem(k);
-    });
-  } catch(e) {}
-  clearTimeout(_fallback);
-  _user = null; _profile = null;
-  showScreen('splash');
-  setTimeout(() => showScreen('onboard'), 1500);
-}
-
-// ── Enter app ─────────────────────────────────────────────
-function enterApp() {
-  const init = (username || 'W').substring(0, 2).toUpperCase();
-  ['nav-av','bottomnav-av','profile-av'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = init;
-  });
-  const pn = document.getElementById('profile-name');
-  const ph = document.getElementById('profile-handle');
-  if (pn) pn.textContent = username || 'WARRIOR';
-  if (ph) ph.textContent = '@' + (username || 'witz_user').toLowerCase();
-  if (_user?.email === ADMIN_EMAIL) {
-    const ab = document.getElementById('btn-admin');
-    if (ab) ab.style.display = 'block';
-  }
-  showScreen('app');
-  startBlink();
-  loadFeed();
-}
-
-function logout() {
-  initSB()?.auth.signOut();
-  _user = null; _profile = null;
-  closeProfile();
-  showScreen('auth');
-  toast('Logged out');
-}
-
-function goToSignUp() {
-  document.getElementById('signin-banner').style.display = 'none';
-  showScreen('auth');
-  switchTab('signup');
-}
-
-// ── Screen manager ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// SCREEN MANAGER
+// ═══════════════════════════════════════════════════════
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
-  repaintForScreen(id);
-}
-function showAuth(mode) {
-  showScreen('auth');
-  switchTab(mode || 'signup');
+  const canvases = { splash:'splash-canvas', onboard:'onboard-canvas', auth:'auth-canvas', app:'app-canvas' };
+  if (canvases[id]) paintStars(document.getElementById(canvases[id]));
 }
 
-function repaintForScreen(id) {
-  const map = { splash:'splash-canvas', onboard:'onboard-canvas', auth:'auth-canvas', app:'app-canvas' };
-  const cid = map[id];
-  if (cid) paintStars(document.getElementById(cid), 55, 55, 30);
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── Onboarding ────────────────────────────────────────────
-let _obSlide = 0;
+// ═══════════════════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════════════════
 function updateOb(i) {
   _obSlide = i;
-  for (let j = 0; j < 4; j++) {
-    document.getElementById('ob' + j)?.classList.toggle('active', j === i);
-    document.getElementById('dot' + j)?.classList.toggle('active', j === i);
+  for (let j=0; j<4; j++) {
+    document.getElementById('ob'+j)?.classList.toggle('active', j===i);
+    document.getElementById('dot'+j)?.classList.toggle('active', j===i);
+  }
+  const btn = document.getElementById('btn-next');
+  if (btn) btn.textContent = i===3 ? 'GET STARTED' : 'NEXT';
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH HELPERS
+// ═══════════════════════════════════════════════════════
+function switchTab(mode) {
+  _authMode = mode;
+  document.getElementById('tab-login')?.classList.toggle('active', mode==='login');
+  document.getElementById('tab-signup')?.classList.toggle('active', mode==='signup');
+  const uw = document.getElementById('uname-wrap');
+  if (uw) uw.style.display = mode==='signup' ? 'block' : 'none';
+  const btn = document.getElementById('btn-auth');
+  if (btn) btn.textContent = mode==='login' ? 'ENTER' : 'JOIN WITZ';
+  clearErr();
+}
+
+function showErr(msg) {
+  const el = document.getElementById('auth-err');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+function clearErr() {
+  const el = document.getElementById('auth-err');
+  if (el) { el.textContent = ''; el.classList.remove('show'); }
+}
+
+function setBtn(txt, disabled) {
+  const btn = document.getElementById('btn-auth');
+  if (btn) { btn.textContent = txt; btn.disabled = !!disabled; }
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH SUBMIT — clean async/await, no .catch() chains
+// ═══════════════════════════════════════════════════════
+async function authSubmit() {
+  clearErr();
+  const sb = getSB();
+  if (!sb) { showErr('Connection error. Try again.'); return; }
+
+  const email = (document.getElementById('input-email')?.value || '').trim();
+  const pass  = (document.getElementById('input-password')?.value || '');
+  const uname = (document.getElementById('input-username')?.value || '').trim();
+
+  if (!email || !pass) { showErr('Enter your email and password.'); return; }
+
+  setBtn('LOADING...', true);
+
+  if (_authMode === 'signup') {
+    if (uname.length < 2) { showErr('Username must be at least 2 characters.'); setBtn('JOIN WITZ', false); return; }
+
+    let signUpResult;
+    try { signUpResult = await sb.auth.signUp({ email, password: pass, options: { data: { username: uname } } }); }
+    catch(e) { showErr('Network error. Try again.'); setBtn('JOIN WITZ', false); return; }
+
+    const { data, error } = signUpResult;
+
+    if (error) {
+      // Account already exists — try logging in instead
+      if (error.message && error.message.toLowerCase().includes('already')) {
+        let loginResult;
+        try { loginResult = await sb.auth.signInWithPassword({ email, password: pass }); } catch(e) {}
+        if (loginResult?.data?.user) {
+          _user = loginResult.data.user;
+          await loadProfile();
+          enterApp(); return;
+        }
+        showErr('Account exists. Check your password.'); setBtn('JOIN WITZ', false); return;
+      }
+      showErr(error.message); setBtn('JOIN WITZ', false); return;
+    }
+
+    if (data?.user) {
+      _user = data.user;
+      // Save username to profiles table
+      try { await sb.from('profiles').upsert({ id: _user.id, username: uname }); } catch(e) {}
+      _username = uname.toUpperCase();
+      enterApp(); return;
+    }
+
+    showErr('Something went wrong. Try again.'); setBtn('JOIN WITZ', false);
+
+  } else {
+    // LOGIN
+    let result;
+    try { result = await sb.auth.signInWithPassword({ email, password: pass }); }
+    catch(e) { showErr('Network error. Try again.'); setBtn('ENTER', false); return; }
+
+    const { data, error } = result;
+    if (error) { showErr(error.message); setBtn('ENTER', false); return; }
+    if (data?.user) {
+      _user = data.user;
+      await loadProfile();
+      enterApp(); return;
+    }
+    showErr('Login failed. Try again.'); setBtn('ENTER', false);
   }
 }
-document.addEventListener('DOMContentLoaded', () => {
-  updateOb(0);
-  document.getElementById('btn-next')?.addEventListener('click', () => {
-    if (_obSlide < 3) updateOb(_obSlide + 1); else { showScreen('auth'); switchTab('signup'); }
-  });
-  document.getElementById('btn-skip')?.addEventListener('click', () => { showScreen('auth'); switchTab('signup'); });
-  document.getElementById('btn-guest')?.addEventListener('click', () => {
-    username = 'GUEST'; setTimeout(() => enterApp(), 400);
-  });
-  document.getElementById('tab-login')?.addEventListener('click', () => switchTab('login'));
-  document.getElementById('tab-signup')?.addEventListener('click', () => switchTab('signup'));
-});
 
-// ── Feed ──────────────────────────────────────────────────
+async function loadProfile() {
+  const sb = getSB(); if (!sb || !_user) return;
+  try {
+    const { data } = await sb.from('profiles').select('username').eq('id', _user.id).single();
+    if (data?.username) _username = data.username.toUpperCase();
+    else _username = (_user.email || 'warrior').split('@')[0].toUpperCase();
+  } catch(e) {
+    _username = (_user.email || 'warrior').split('@')[0].toUpperCase();
+  }
+}
+
+async function guestMode() {
+  _user = null; _username = 'GUEST';
+  enterApp();
+}
+
+// ═══════════════════════════════════════════════════════
+// ENTER APP
+// ═══════════════════════════════════════════════════════
+function enterApp() {
+  const init = (_username || 'W').substring(0,2).toUpperCase();
+  ['nav-av','bottomnav-av','profile-av'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = init;
+  });
+  const pn = document.getElementById('profile-name');
+  const ph = document.getElementById('profile-handle');
+  if (pn) pn.textContent = _username;
+  if (ph) ph.textContent = '@' + _username.toLowerCase();
+  if (_user?.email === ADMIN) {
+    const ab = document.getElementById('btn-admin'); if (ab) ab.style.display='block';
+  }
+  showScreen('app');
+  loadFeed();
+}
+
+async function logout() {
+  const sb = getSB();
+  if (sb) { try { await sb.auth.signOut(); } catch(e) {} }
+  _user = null; _username = 'WARRIOR';
+  closeProfile();
+  showScreen('auth');
+  switchTab('login');
+  toast('Logged out');
+}
+
+// ═══════════════════════════════════════════════════════
+// FEED
+// ═══════════════════════════════════════════════════════
 async function loadFeed() {
-  const sb = initSB(); if (!sb) return;
-  const container = document.getElementById('reel-container');
-  if (!container) return;
-  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;font-size:12px;letter-spacing:2px;">LOADING REELS...</div>';
-  const { data: videos } = await sb.from('videos').select('*,profiles(username)').order('created_at', { ascending: false }).limit(30);
+  const sb = getSB();
+  const wrap = document.getElementById('reel-wrap'); if (!wrap) return;
+  wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;font-size:12px;letter-spacing:2px;">LOADING REELS...</div>';
+  if (!sb) { wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;">NO CONNECTION</div>'; return; }
+
+  let videos;
+  try {
+    const { data } = await sb.from('videos').select('*,profiles(username)').order('created_at', { ascending: false }).limit(30);
+    videos = data;
+  } catch(e) { wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;">LOAD ERROR</div>'; return; }
+
   if (!videos || videos.length === 0) {
-    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;gap:16px;"><div style="font-size:44px;">🎬</div><div style="font-size:13px;letter-spacing:2px;">NO REELS YET</div><div style="font-size:11px;color:#2a4a6c;">Post the first one!</div></div>';
+    wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#3a5a7c;gap:16px;"><div style="font-size:44px;">🎬</div><div style="font-size:13px;letter-spacing:2px;">NO REELS YET</div><div style="font-size:11px;color:#2a4a6c;">Post the first one!</div></div>`;
     return;
   }
-  container.innerHTML = '';
-  videos.forEach(v => container.appendChild(buildReel(v)));
+  wrap.innerHTML = '';
+  videos.forEach(v => wrap.appendChild(buildReel(v)));
 }
 
 function buildReel(v) {
   const div = document.createElement('div');
-  div.className = 'real-reel';
-  div.dataset.id = v.id;
+  div.className = 'real-reel'; div.dataset.id = v.id;
   const uname = '@' + (v.profiles?.username || 'witz_user').toLowerCase();
-  const initials = (v.profiles?.username || 'W').substring(0, 2).toUpperCase();
+  const init = (v.profiles?.username || 'W').substring(0,2).toUpperCase();
+
   div.innerHTML = `
     <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
-    <div style="position:absolute;bottom:72px;left:14px;right:66px;z-index:5;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-        <div class="reel-av" style="width:34px;height:34px;font-size:12px;flex-shrink:0;">${initials}</div>
+    <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div class="reel-av">${init}</div>
         <span class="reel-uname">${uname}</span>
       </div>
-      <div class="reel-cap" style="max-height:44px;overflow:hidden;">${v.caption || ''}</div>
+      <div class="reel-cap">${v.caption || ''}</div>
     </div>
     <div style="position:absolute;bottom:72px;right:8px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:5;">
-      <div class="act-col" onclick="realLike('${v.id}',this)" style="cursor:pointer;">
-        <div class="tribal-btn" id="rl-icon-${v.id}">
+      <div class="act-col" onclick="doLike('${v.id}',this)" style="cursor:pointer;">
+        <div class="tribal-btn" id="rl-like-${v.id}">
           <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
             <polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
             <polygon points="43,14 52,27 68,27 56,37 61,52 43,43 25,52 30,37 18,27 34,27" fill="#142d6e" stroke="#8b0000" stroke-width="1.2"/>
@@ -1056,47 +687,29 @@ function buildReel(v) {
             <line x1="43" y1="64" x2="43" y2="82" stroke="#4da6ff" stroke-width="2"/>
             <line x1="4" y1="43" x2="22" y2="43" stroke="#4da6ff" stroke-width="2"/>
             <line x1="64" y1="43" x2="82" y2="43" stroke="#4da6ff" stroke-width="2"/>
-            <line x1="14" y1="14" x2="27" y2="27" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="59" y1="59" x2="72" y2="72" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="72" y1="14" x2="59" y2="27" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="14" y1="72" x2="27" y2="59" stroke="#8b0000" stroke-width="2.5" stroke-linecap="round"/>
-            <rect x="38" y="38" width="10" height="10" rx="1" fill="#8b0000" transform="rotate(45 43 43)"/>
             <circle cx="43" cy="43" r="3.5" fill="#ff2222"/>
-            <circle cx="43" cy="5" r="2.5" fill="#4da6ff"/>
-            <circle cx="43" cy="81" r="2.5" fill="#4da6ff"/>
-            <circle cx="5" cy="43" r="2.5" fill="#4da6ff"/>
-            <circle cx="81" cy="43" r="2.5" fill="#4da6ff"/>
           </svg>
         </div>
-        <span class="act-label" id="rl-count-${v.id}">0</span>
+        <span class="act-label" id="rl-lc-${v.id}">0</span>
       </div>
-      <div class="act-col" onclick="openComments()" style="cursor:pointer;">
+      <div class="act-col" onclick="openComments('${v.id}')" style="cursor:pointer;">
         <div class="tribal-btn">
           <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
             <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
             <circle cx="43" cy="43" r="32" fill="none" stroke="#8b0000" stroke-width="5.5"/>
             <circle cx="43" cy="43" r="27" fill="#0f2255"/>
-            <line x1="43" y1="11" x2="43" y2="21" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-            <line x1="43" y1="65" x2="43" y2="75" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-            <line x1="11" y1="43" x2="21" y2="43" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
-            <line x1="65" y1="43" x2="75" y2="43" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
             <path d="M33 43 Q33 36 43 36 Q53 36 53 43 Q53 48 48 50 L48 55 L43 50 Q33 50 33 43Z" fill="#fff"/>
-            <circle cx="38" cy="43" r="2" fill="#1a3a8f"/>
-            <circle cx="43" cy="43" r="2" fill="#1a3a8f"/>
-            <circle cx="48" cy="43" r="2" fill="#1a3a8f"/>
+            <circle cx="38" cy="43" r="2" fill="#1a3a8f"/><circle cx="43" cy="43" r="2" fill="#1a3a8f"/><circle cx="48" cy="43" r="2" fill="#1a3a8f"/>
           </svg>
         </div>
-        <span class="act-label" id="rl-cm-${v.id}">0</span>
+        <span class="act-label" id="rl-cc-${v.id}">0</span>
       </div>
-      <div class="act-col" onclick="realShare('${v.id}')" style="cursor:pointer;">
+      <div class="act-col" onclick="doShare('${v.id}')" style="cursor:pointer;">
         <div class="tribal-btn">
           <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
             <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#1a3a8f" stroke-width="0.6" stroke-dasharray="3 3"/>
             <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
             <path d="M43 27 C52 27 58 34 58 43 C58 52 52 58 43 58 C38 58 34 56 31 52" fill="none" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M43 34 C49 34 53 38 53 43 C53 48 49 52 43 52" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round"/>
-            <path d="M28 57 C24 52 22 47 22 43 C22 30 31 20 43 20" fill="none" stroke="#8b0000" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 2"/>
             <circle cx="43" cy="43" r="5" fill="#8b0000"/><circle cx="43" cy="43" r="2.5" fill="#ff3333"/>
             <path d="M43 8 L45 14 L43 12 L41 14 Z" fill="#4da6ff"/>
             <path d="M43 78 L45 72 L43 74 L41 72 Z" fill="#4da6ff"/>
@@ -1104,15 +717,15 @@ function buildReel(v) {
             <path d="M78 43 L72 41 L74 43 L72 45 Z" fill="#4da6ff"/>
           </svg>
         </div>
-        <span class="act-label">Share</span>
+        <span class="act-label">SHARE</span>
       </div>
     </div>`;
-  loadRealCounts(v.id);
+
+  loadCounts(v.id);
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
-      const vid = e.target.querySelector('video');
-      if (!vid) return;
-      if (e.isIntersecting) { vid.muted = _isMuted; vid.play().catch(() => {}); _currentVideoId = e.target.dataset.id; }
+      const vid = e.target.querySelector('video'); if (!vid) return;
+      if (e.isIntersecting) { vid.muted=true; vid.play().catch(()=>{}); _currentVideoId = e.target.dataset.id; }
       else vid.pause();
     });
   }, { threshold: 0.6 });
@@ -1120,42 +733,97 @@ function buildReel(v) {
   return div;
 }
 
-async function loadRealCounts(id) {
-  const sb = initSB(); if (!sb) return;
-  const { count: lc } = await sb.from('likes').select('*', { count:'exact', head:true }).eq('video_id', id);
-  const { count: cc } = await sb.from('comments').select('*', { count:'exact', head:true }).eq('video_id', id);
-  const lEl = document.getElementById('rl-count-' + id);
-  const cEl = document.getElementById('rl-cm-' + id);
-  if (lEl) lEl.textContent = lc || 0;
-  if (cEl) cEl.textContent = cc || 0;
-  if (_user) {
-    const { data } = await sb.from('likes').select('id').eq('video_id', id).eq('user_id', _user.id).single();
-    if (data) { const icon = document.getElementById('rl-icon-' + id); if (icon) icon.style.filter = 'drop-shadow(0 0 6px #ff2222)'; }
-  }
+async function loadCounts(id) {
+  const sb = getSB(); if (!sb) return;
+  try {
+    const [lRes, cRes] = await Promise.all([
+      sb.from('likes').select('*', { count:'exact', head:true }).eq('video_id', id),
+      sb.from('comments').select('*', { count:'exact', head:true }).eq('video_id', id)
+    ]);
+    const lEl = document.getElementById('rl-lc-'+id);
+    const cEl = document.getElementById('rl-cc-'+id);
+    if (lEl) lEl.textContent = lRes.count || 0;
+    if (cEl) cEl.textContent = cRes.count || 0;
+    if (_user) {
+      const { data } = await sb.from('likes').select('id').eq('video_id', id).eq('user_id', _user.id).single();
+      if (data) { const icon = document.getElementById('rl-like-'+id); if (icon) icon.style.filter='drop-shadow(0 0 8px #ff2222)'; }
+    }
+  } catch(e) {}
 }
 
-async function realLike(id) {
-  if (!_user) { showSignInBanner('Sign in to like'); return; }
-  const sb = initSB();
-  const icon = document.getElementById('rl-icon-' + id);
-  const isLiked = icon?.style.filter?.includes('drop-shadow');
-  if (isLiked) {
-    await sb.from('likes').delete().eq('video_id', id).eq('user_id', _user.id);
-    if (icon) icon.style.filter = '';
-  } else {
-    await sb.from('likes').upsert({ video_id: id, user_id: _user.id });
-    if (icon) { icon.style.filter = 'drop-shadow(0 0 6px #ff2222)'; icon.style.transform = 'scale(1.2)'; setTimeout(() => { if(icon) icon.style.transform = ''; }, 200); }
-  }
-  loadRealCounts(id);
+async function doLike(id) {
+  if (!_user) { showSignInBanner('Sign in to stamp reels'); return; }
+  const sb = getSB();
+  const icon = document.getElementById('rl-like-'+id);
+  const liked = icon?.style.filter?.includes('drop-shadow');
+  try {
+    if (liked) {
+      await sb.from('likes').delete().eq('video_id', id).eq('user_id', _user.id);
+      if (icon) icon.style.filter = '';
+    } else {
+      await sb.from('likes').upsert({ video_id: id, user_id: _user.id });
+      if (icon) { icon.style.filter='drop-shadow(0 0 8px #ff2222)'; icon.style.transform='scale(1.2)'; setTimeout(()=>{ if(icon) icon.style.transform=''; },200); }
+    }
+    loadCounts(id);
+  } catch(e) {}
 }
 
-function realShare(id) {
-  const url = window.location.href.split('?')[0] + '?reel=' + id;
+function doShare(id) {
+  const url = location.href.split('?')[0] + '?reel=' + id;
   if (navigator.share) navigator.share({ title:'WITZ Reel', url });
   else navigator.clipboard?.writeText(url).then(() => toast('Link copied!'));
 }
 
-// ── Upload ────────────────────────────────────────────────
+function switchFeed(el) {
+  document.querySelectorAll('.topnav-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+// COMMENTS
+// ═══════════════════════════════════════════════════════
+function openComments(videoId) {
+  if (videoId) _currentVideoId = videoId;
+  document.getElementById('c-sheet')?.classList.add('open');
+  if (_currentVideoId) loadComments(_currentVideoId);
+}
+function closeComments() { document.getElementById('c-sheet')?.classList.remove('open'); }
+
+async function loadComments(videoId) {
+  const sb = getSB(); if (!sb) return;
+  const list = document.getElementById('c-list'); if (!list) return;
+  list.innerHTML = '';
+  try {
+    const { data } = await sb.from('comments').select('*,profiles(username)').eq('video_id', videoId).order('created_at', { ascending: false }).limit(50);
+    if (!data || data.length === 0) { list.innerHTML = '<div style="color:#3a5a7c;font-size:12px;letter-spacing:2px;padding:16px;text-align:center;">NO COMMENTS YET</div>'; return; }
+    const cols = ['#1a3a8f','#8b0000','#0f4c2a','#4a2a0a'];
+    data.forEach((c, i) => {
+      const uname = c.profiles?.username || 'user';
+      const init = uname.substring(0,2).toUpperCase();
+      const el = document.createElement('div'); el.className = 'c-item';
+      el.innerHTML = `<div class="c-av" style="background:${cols[i%cols.length]};">${init}</div><div class="c-body"><div class="c-user">@${uname}</div><div class="c-text">${c.text || ''}</div></div>`;
+      list.appendChild(el);
+    });
+  } catch(e) {}
+}
+
+async function postComment() {
+  const inp = document.getElementById('c-input'); if (!inp?.value.trim()) return;
+  const text = inp.value.trim();
+  if (!_user) { showSignInBanner('Sign in to comment'); return; }
+  if (!_currentVideoId) return;
+  const sb = getSB(); if (!sb) return;
+  inp.value = '';
+  try {
+    await sb.from('comments').insert({ video_id: _currentVideoId, user_id: _user.id, text });
+    loadComments(_currentVideoId);
+    loadCounts(_currentVideoId);
+  } catch(e) { toast('Comment failed'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════════════════
 function openUpload() {
   if (!_user) { showSignInBanner('Sign in to post reels'); return; }
   document.getElementById('upload-panel')?.classList.add('open');
@@ -1164,102 +832,42 @@ function closeUpload() {
   document.getElementById('upload-panel')?.classList.remove('open');
   const fp = document.getElementById('file-pick'); if (fp) fp.value = '';
   const cap = document.getElementById('upload-caption'); if (cap) cap.value = '';
-  const fn = document.getElementById('upload-file-name'); if (fn) fn.textContent = 'MP4, MOV up to 500MB';
-  const btn = document.querySelector('.btn-upload'); if (btn) { btn.disabled = false; btn.textContent = 'CARVE YOUR MARK'; }
-  _recordedFile = null;
+  const fn = document.getElementById('upload-file-name'); if (fn) fn.textContent = 'MP4, MOV up to 200MB';
+  const btn = document.querySelector('.btn-upload'); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; }
 }
 
 function fileSelected(inp) {
   if (!inp?.files?.[0]) return;
-  const file = inp.files[0];
-  if (file.size > 200 * 1024 * 1024) { toast('Max 200MB (~2 min video)'); inp.value = ''; return; }
+  const f = inp.files[0];
+  if (f.size > 200*1024*1024) { toast('Max 200MB'); inp.value=''; return; }
   const fn = document.getElementById('upload-file-name');
-  if (fn) fn.textContent = file.name.substring(0, 34) + ' (' + (file.size/1024/1024).toFixed(1) + 'MB)';
+  if (fn) fn.textContent = f.name.substring(0,34) + ' (' + (f.size/1024/1024).toFixed(1) + 'MB)';
   toast('Video selected ✓');
 }
 
 async function submitUpload() {
-  const sb = initSB(); if (!sb) return;
-  const cap = document.getElementById('upload-caption')?.value.trim();
-  const file = _recordedFile || document.getElementById('file-pick')?.files?.[0];
-  _recordedFile = null;
+  const sb = getSB(); if (!sb) return;
+  if (!_user) { toast('Sign in first'); return; }
+  const cap = (document.getElementById('upload-caption')?.value || '').trim();
+  const file = document.getElementById('file-pick')?.files?.[0];
   if (!file) { toast('Select a video first'); return; }
   if (!cap) { toast('Add a caption'); return; }
-  if (!_user) { toast('Sign in to post'); return; }
   const btn = document.querySelector('.btn-upload');
-  if (btn) { btn.textContent = 'UPLOADING...'; btn.disabled = true; }
-  const ext = file.name?.split('.').pop() || 'mp4';
+  if (btn) { btn.textContent='UPLOADING...'; btn.disabled=true; }
+  const ext = (file.name?.split('.').pop() || 'mp4');
   const path = _user.id + '/' + Date.now() + '.' + ext;
-  const { error: upErr } = await sb.storage.from('videos').upload(path, file, { cacheControl: '3600', upsert: false });
-  if (upErr) {
-    toast('Upload failed: ' + (upErr.message || 'File may be too large'));
-    if (btn) { btn.disabled = false; btn.textContent = 'CARVE YOUR MARK'; }
-    return;
-  }
-  const { data: { publicUrl } } = sb.storage.from('videos').getPublicUrl(path);
-  const { error: dbErr } = await sb.from('videos').insert({ user_id: _user.id, url: publicUrl, caption: cap });
-  if (dbErr) { toast('Save failed: ' + dbErr.message); if (btn) { btn.disabled = false; btn.textContent = 'CARVE YOUR MARK'; } return; }
-  closeUpload(); toast('🔥 Reel posted to WITZ!'); loadFeed();
-}
-
-// ── Recording ─────────────────────────────────────────────
-let _mediaRecorder = null, _recordedChunks = [], _recordedBlob = null, _stream = null;
-
-function startRecording() {
-  document.getElementById('record-preview').style.display = 'flex';
-}
-async function beginRecord() {
   try {
-    _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
-    const vid = document.getElementById('record-video');
-    if (vid) { vid.srcObject = _stream; vid.muted = true; vid.play(); }
-    _recordedChunks = [];
-    _mediaRecorder = new MediaRecorder(_stream);
-    _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recordedChunks.push(e.data); };
-    _mediaRecorder.onstop = () => {
-      _recordedBlob = new Blob(_recordedChunks, { type: 'video/webm' });
-      const vid = document.getElementById('record-video');
-      if (vid) { vid.srcObject = null; vid.src = URL.createObjectURL(_recordedBlob); vid.muted = false; vid.loop = true; vid.play(); }
-      document.getElementById('btn-use-rec').style.display = 'inline-block';
-      document.getElementById('rec-status').textContent = 'Preview your recording';
-    };
-    _mediaRecorder.start();
-    document.getElementById('btn-start-rec').style.display = 'none';
-    document.getElementById('btn-stop-rec').style.display = 'inline-block';
-    let secs = 0;
-    const timer = setInterval(() => {
-      if (!_mediaRecorder || _mediaRecorder.state !== 'recording') { clearInterval(timer); return; }
-      secs++;
-      const s = document.getElementById('rec-status');
-      if (s) s.textContent = '● REC ' + String(Math.floor(secs/60)).padStart(2,'0') + ':' + String(secs%60).padStart(2,'0');
-      if (secs >= 120) { stopRecord(); clearInterval(timer); }
-    }, 1000);
-  } catch(e) { toast('Camera access denied — allow camera permissions'); }
-}
-function stopRecord() {
-  if (_mediaRecorder?.state === 'recording') _mediaRecorder.stop();
-  if (_stream) _stream.getTracks().forEach(t => t.stop());
-  document.getElementById('btn-start-rec').style.display = 'inline-block';
-  document.getElementById('btn-stop-rec').style.display = 'none';
-}
-function useRecording() {
-  if (!_recordedBlob) return;
-  _recordedFile = new File([_recordedBlob], 'recording_' + Date.now() + '.webm', { type: 'video/webm' });
-  cancelRecording();
-  const fn = document.getElementById('upload-file-name');
-  if (fn) fn.textContent = 'Recording ready (' + (_recordedBlob.size/1024/1024).toFixed(1) + 'MB)';
-  toast('Recording ready — add a caption and post!');
-}
-function cancelRecording() {
-  if (_stream) _stream.getTracks().forEach(t => t.stop());
-  document.getElementById('record-preview').style.display = 'none';
-  document.getElementById('btn-start-rec').style.display = 'inline-block';
-  document.getElementById('btn-stop-rec').style.display = 'none';
-  document.getElementById('btn-use-rec').style.display = 'none';
-  document.getElementById('rec-status').textContent = '';
+    const { error: upErr } = await sb.storage.from('videos').upload(path, file, { cacheControl:'3600', upsert:false });
+    if (upErr) { toast('Upload failed: ' + upErr.message); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } return; }
+    const { data: { publicUrl } } = sb.storage.from('videos').getPublicUrl(path);
+    await sb.from('videos').insert({ user_id:_user.id, url:publicUrl, caption:cap });
+    closeUpload(); toast('🔥 Reel posted!'); loadFeed();
+  } catch(e) { toast('Upload error'); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } }
 }
 
-// ── Profile ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════
 function openProfile() {
   document.getElementById('profile-panel')?.classList.add('open');
   if (_user) loadProfileVideos();
@@ -1267,207 +875,147 @@ function openProfile() {
 function closeProfile() { document.getElementById('profile-panel')?.classList.remove('open'); }
 
 async function loadProfileVideos() {
-  const sb = initSB(); if (!sb || !_user) return;
+  const sb = getSB(); if (!sb || !_user) return;
   const grid = document.getElementById('profile-grid'); if (!grid) return;
   grid.innerHTML = '<div style="padding:12px;color:#3a5a7c;font-size:10px;letter-spacing:2px;grid-column:1/-1;">LOADING...</div>';
-  const { data: vids } = await sb.from('videos').select('*').eq('user_id', _user.id).order('created_at', { ascending: false });
-  const sn = document.querySelectorAll('.pstat-num'); if (sn[0]) sn[0].textContent = vids?.length || 0;
-  if (!vids || vids.length === 0) { grid.innerHTML = '<div style="padding:16px;color:#3a5a7c;font-size:10px;letter-spacing:2px;grid-column:1/-1;text-align:center;">NO REELS YET</div>'; return; }
-  grid.innerHTML = '';
-  vids.forEach(v => {
-    const t = document.createElement('div'); t.className = 'profile-thumb';
-    t.innerHTML = `<video src="${v.url}" muted preload="metadata"></video><button class="del-btn" onclick="deleteMyVideo('${v.id}','${v.url}',this.parentElement)">✕</button>`;
-    grid.appendChild(t);
-  });
+  try {
+    const { data: vids } = await sb.from('videos').select('*').eq('user_id',_user.id).order('created_at',{ ascending:false });
+    const sn = document.getElementById('pstat-reels'); if (sn) sn.textContent = vids?.length || 0;
+    if (!vids || vids.length===0) { grid.innerHTML='<div style="padding:16px;color:#3a5a7c;font-size:10px;letter-spacing:2px;grid-column:1/-1;text-align:center;">NO REELS YET</div>'; return; }
+    grid.innerHTML='';
+    vids.forEach(v => {
+      const t = document.createElement('div'); t.className='profile-thumb';
+      t.innerHTML=`<video src="${v.url}" muted preload="metadata"></video><button class="del-btn" onclick="deleteVideo('${v.id}','${v.url}',this.parentElement)">✕</button>`;
+      grid.appendChild(t);
+    });
+  } catch(e) {}
 }
 
-async function deleteMyVideo(videoId, url, thumbEl) {
+async function deleteVideo(id, url, el) {
   if (!_user) return;
-  if (!confirm('Delete this reel permanently?\nThis cannot be undone.')) return;
-  const sb = initSB();
-  await sb.from('videos').delete().eq('id', videoId).eq('user_id', _user.id);
-  try { const path = url.split('/videos/')[1]; if (path) await sb.storage.from('videos').remove([decodeURIComponent(path)]); } catch(e) {}
-  thumbEl?.remove(); toast('Reel deleted'); loadFeed();
+  if (!confirm('Delete this reel permanently?')) return;
+  const sb = getSB();
+  try {
+    await sb.from('videos').delete().eq('id',id).eq('user_id',_user.id);
+    try { const p=url.split('/videos/')[1]; if (p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
+    el?.remove(); toast('Reel deleted'); loadFeed();
+  } catch(e) {}
 }
 
-// ── Search ────────────────────────────────────────────────
-function openSearch() { document.getElementById('search-panel')?.classList.add('open'); setTimeout(() => document.getElementById('search-field')?.focus(), 300); }
+// ═══════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════
+function openSearch() { document.getElementById('search-panel')?.classList.add('open'); setTimeout(()=>document.getElementById('search-field')?.focus(),300); }
 function closeSearch() { document.getElementById('search-panel')?.classList.remove('open'); }
 
-// ── Inbox ─────────────────────────────────────────────────
-function openInbox() {
-  const p = document.getElementById('inbox-panel'); if (!p) return;
-  p.style.display = 'flex';
-  if (!_user) {
-    const l = document.getElementById('inbox-list');
-    if (l) l.innerHTML = '<div style="font-size:32px;">🔒</div><div style="font-size:13px;letter-spacing:2px;">SIGN IN TO VIEW</div>';
-  }
-}
-function closeInbox() { const p = document.getElementById('inbox-panel'); if (p) p.style.display = 'none'; }
+// ═══════════════════════════════════════════════════════
+// INBOX
+// ═══════════════════════════════════════════════════════
+function openInbox() { const p=document.getElementById('inbox-panel'); if(p) p.style.display='flex'; }
+function closeInbox() { const p=document.getElementById('inbox-panel'); if(p) p.style.display='none'; }
 
-// ── Admin ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════════════════════
 function openAdmin() {
-  if (!_user || _user.email !== ADMIN_EMAIL) { toast('Access denied'); return; }
-  const p = document.getElementById('admin-panel'); if (!p) return;
-  p.style.display = 'flex'; adminLoadAll();
+  if (!_user || _user.email !== ADMIN) { toast('Access denied'); return; }
+  const p=document.getElementById('admin-panel'); if(p) p.style.display='flex';
+  adminLoad();
 }
-function closeAdmin() { const p = document.getElementById('admin-panel'); if (p) p.style.display = 'none'; }
-async function adminLoadAll() {
-  const sb = initSB(); const list = document.getElementById('admin-list'); if (!list) return;
-  list.innerHTML = '<div style="padding:16px;color:#3a5a7c;font-size:11px;letter-spacing:2px;">LOADING...</div>';
-  const { data: vids } = await sb.from('videos').select('*,profiles(username)').order('created_at', { ascending: false });
-  if (!vids || vids.length === 0) { list.innerHTML = '<div style="padding:20px;color:#3a5a7c;text-align:center;">No videos</div>'; return; }
-  list.innerHTML = '';
-  vids.forEach(v => {
-    const row = document.createElement('div'); row.className = 'admin-row';
-    const uname = v.profiles?.username || 'unknown';
-    row.innerHTML = `<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;"><video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname} · ${new Date(v.created_at).toLocaleDateString()}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||'(no caption)'}</div></div><button onclick="adminDelete('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;">DELETE</button>`;
-    list.appendChild(row);
-  });
+function closeAdmin() { const p=document.getElementById('admin-panel'); if(p) p.style.display='none'; }
+async function adminLoad() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+  try {
+    const { data:vids } = await sb.from('videos').select('*,profiles(username)').order('created_at',{ ascending:false });
+    if (!vids?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No videos</div>'; return; }
+    list.innerHTML='';
+    vids.forEach(v => {
+      const row=document.createElement('div'); row.className='admin-row';
+      const uname=v.profiles?.username||'unknown';
+      row.innerHTML=`<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;"><video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||''}</div></div><button onclick="adminDel('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">DEL</button>`;
+      list.appendChild(row);
+    });
+  } catch(e) {}
 }
-async function adminDelete(id, url, rowEl) {
+async function adminDel(id,url,row) {
   if (!confirm('Delete permanently?')) return;
-  const sb = initSB();
-  await sb.from('videos').delete().eq('id', id);
-  try { const p = url.split('/videos/')[1]; if (p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
-  rowEl?.remove(); toast('Deleted'); loadFeed();
+  const sb=getSB();
+  try { await sb.from('videos').delete().eq('id',id); try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {} row?.remove(); toast('Deleted'); loadFeed(); } catch(e) {}
 }
 
-// ── Forgot PW ─────────────────────────────────────────────
-function openForgot() { const p = document.getElementById('forgot-panel'); if (p) p.style.display = 'flex'; }
-function closeForgot() { const p = document.getElementById('forgot-panel'); if (p) p.style.display = 'none'; }
-async function sendResetEmail() {
-  const sb = initSB();
-  const email = document.getElementById('forgot-email')?.value.trim();
-  const msg = document.getElementById('forgot-msg');
-  if (!email) { if (msg) msg.textContent = 'Enter your email.'; return; }
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://witz-deploy2.vercel.app' });
-  if (error) { if (msg) msg.textContent = error.message; return; }
-  if (msg) { msg.style.color = '#4CAF50'; msg.textContent = 'Reset link sent! Check your email.'; }
+// ═══════════════════════════════════════════════════════
+// FORGOT PASSWORD
+// ═══════════════════════════════════════════════════════
+function openForgot() { const p=document.getElementById('forgot-panel'); if(p) p.style.display='flex'; }
+function closeForgot() { const p=document.getElementById('forgot-panel'); if(p) p.style.display='none'; }
+async function sendReset() {
+  const sb=getSB();
+  const email=(document.getElementById('forgot-email')?.value||'').trim();
+  const msg=document.getElementById('forgot-msg');
+  if (!email) { if(msg) msg.textContent='Enter your email.'; return; }
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo:'https://witz-deploy2.vercel.app' });
+    if (error) { if(msg) msg.textContent=error.message; return; }
+    if(msg){ msg.style.color='#4CAF50'; msg.textContent='Reset link sent! Check your email.'; }
+  } catch(e) { if(msg) msg.textContent='Error. Try again.'; }
 }
 
-// ── Comments (original) ───────────────────────────────────
-let liked=false, likeN=4219, commentN=127, shareN=348, following=false;
-let cStamps=[23,58,11], cOn=[false,false,false];
-function openComments() { document.getElementById('c-sheet')?.classList.add('open'); }
-function closeComments() { document.getElementById('c-sheet')?.classList.remove('open'); }
-function stampC(btn,idx) { cOn[idx]=!cOn[idx]; cStamps[idx]+=cOn[idx]?1:-1; btn.classList.toggle('on',cOn[idx]); const s=document.getElementById('cs'+idx); if(s)s.textContent=cStamps[idx]; }
-async function postComment() {
-  const inp = document.getElementById('c-input'); if (!inp?.value.trim()) return;
-  const text = inp.value.trim();
-  const list = document.getElementById('c-list'); if (!list) return;
-  const i = list.children.length;
-  const cols = ['#1a3a8f','#8b0000','#0f4c2a','#4a2a0a'];
-  const div = document.createElement('div'); div.className = 'c-item';
-  div.innerHTML = `<div class="c-av" style="background:${cols[i%cols.length]};">${username.substring(0,2)}</div><div class="c-body"><div class="c-user">@${username.toLowerCase()}</div><div class="c-text">${text}</div><div class="c-acts"><div class="c-stamp" onclick="stampC(this,${i})"><svg width="12" height="12" viewBox="0 0 86 86"><polygon points="43,4 56,22 78,22 64,38 70,60 43,48 16,60 22,38 8,22 30,22" fill="currentColor"/></svg><span id="cs${i}">0</span></div><span class="c-reply">Reply</span><span class="c-time">now</span></div></div>`;
-  list.insertBefore(div, list.firstChild);
-  inp.value = '';
-  const badge = document.getElementById('c-badge'); if (badge) badge.textContent = ++commentN;
-  toast('Comment posted');
-  // Save to Supabase if logged in
-  if (_user && _currentVideoId) {
-    const sb = initSB(); if (!sb) return;
-    sb.from('comments').insert({ video_id: _currentVideoId, user_id: _user.id, text }).catch(()=>{});
-  }
-}
-
-// ── Nav / misc ────────────────────────────────────────────
-function navTo(el, section) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (el) el.classList.add('active');
-  if (section === 'inbox') { openInbox(); return; }
-}
-function switchFeed(el) {
-  document.querySelectorAll('.feed-tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-}
-function toggleFollow() {
-  following = !following;
-  const btn = document.getElementById('btn-follow');
-  if (btn) { btn.textContent = following ? 'FOLLOWING' : '+ FOLLOW'; btn.classList.toggle('active', following); }
-  toast(following ? 'Following!' : 'Unfollowed');
-}
-function activateLike() {
-  liked = true;
-  const lc = document.getElementById('like-count'); if (lc) lc.textContent = ++likeN;
-  const svg = document.getElementById('like-svg'); if (svg) svg.style.filter = 'drop-shadow(0 0 8px #ff2222)';
-}
-function tapLike() { activateLike(); toast('STAMPED'); }
-function nextReel() { document.querySelector('#reel-wrap')?.scrollBy(0, window.innerHeight); }
-function prevReel() { document.querySelector('#reel-wrap')?.scrollBy(0, -window.innerHeight); }
-function shareReel() { realShare(_currentVideoId || ''); }
-function startBlink() {}
-function fmt(n) { return n >= 1000 ? (n/1000).toFixed(1) + 'K' : String(n); }
-
-// ── Sign in banner ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// SIGN-IN BANNER
+// ═══════════════════════════════════════════════════════
 function showSignInBanner(msg) {
-  const b = document.getElementById('signin-banner'); if (!b) return;
-  const m = b.querySelector('.signin-banner-msg'); if (m) m.textContent = msg;
-  b.style.display = 'flex';
-  setTimeout(() => { b.style.display = 'none'; }, 4500);
+  const b=document.getElementById('signin-banner'); if(!b) return;
+  const m=document.getElementById('signin-banner-msg'); if(m) m.textContent=msg;
+  b.style.display='flex';
+  setTimeout(()=>{ b.style.display='none'; },4000);
 }
-function goToSignUp() {
-  document.getElementById('signin-banner').style.display = 'none';
+function goSignUp() {
+  document.getElementById('signin-banner').style.display='none';
   showScreen('auth'); switchTab('signup');
 }
 
-// ── Toast ─────────────────────────────────────────────────
-let toastTimer = null;
-function toast(msg) {
-  const t = document.getElementById('toast'); if (!t) return;
-  t.textContent = msg; t.classList.add('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+// ═══════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════
+function navTo(el, section) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (section==='discover') openSearch();
+  if (section==='inbox') openInbox();
 }
 
-// ── Star painter ──────────────────────────────────────────
-function paintStars(canvas, sunX, sunY, sunR) {
-  if (!canvas) return;
-  const W = canvas.parentElement?.offsetWidth || window.innerWidth;
-  const H = canvas.parentElement?.offsetHeight || window.innerHeight;
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  for (let i = 0; i < 90; i++) {
-    const x=(Math.sin(i*127.1)*0.5+0.5)*W, y=(Math.sin(i*311.7)*0.5+0.5)*H;
-    const r=0.3+(Math.sin(i*73.1)*0.5+0.5)*1.2, op=0.3+(Math.sin(i*47.3)*0.5+0.5)*0.7;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(255,255,255,${op.toFixed(2)})`;ctx.fill();
-  }
-  for (let i=0;i<10;i++) {
-    const x=(Math.sin(i*97.3+500)*0.5+0.5)*W, y=(Math.sin(i*213.1+500)*0.5+0.5)*H;
-    const sz=4+(Math.sin(i*37)*0.5+0.5)*4;
-    ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.lineWidth=0.8;
-    ctx.beginPath();ctx.moveTo(x,y-sz);ctx.lineTo(x,y+sz);ctx.moveTo(x-sz,y);ctx.lineTo(x+sz,y);ctx.stroke();
-  }
-  if (!sunX) return;
-  const cx=sunX,cy=sunY,r=sunR;
-  const glow=ctx.createRadialGradient(cx,cy,0,cx,cy,r*2.5);
-  glow.addColorStop(0,'rgba(255,150,0,0.5)');glow.addColorStop(0.6,'rgba(255,60,0,0.2)');glow.addColorStop(1,'rgba(200,0,0,0)');
-  ctx.beginPath();ctx.arc(cx,cy,r*2.5,0,Math.PI*2);ctx.fillStyle=glow;ctx.fill();
-  for (let i=0;i<16;i++) {
-    const a=(i/16)*Math.PI*2,len=r+15+(Math.sin(i*37)*0.5+0.5)*30,op=0.5+(Math.sin(i*17)*0.5+0.5)*0.45;
-    ctx.beginPath();ctx.moveTo(cx+(r+2)*Math.cos(a),cy+(r+2)*Math.sin(a));ctx.lineTo(cx+len*Math.cos(a),cy+len*Math.sin(a));
-    ctx.strokeStyle=`rgba(255,185,0,${op})`;ctx.lineWidth=0.8+Math.sin(i*7)*0.4;ctx.lineCap='round';ctx.stroke();
-  }
-  const sunG=ctx.createRadialGradient(cx-r*0.2,cy-r*0.2,0,cx,cy,r);
-  sunG.addColorStop(0,'#fffde0');sunG.addColorStop(0.2,'#ffee00');sunG.addColorStop(0.5,'#ffaa00');sunG.addColorStop(0.8,'#ff4400');sunG.addColorStop(1,'#1a0400');
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='#1a0400';ctx.fill();ctx.fillStyle=sunG;ctx.fill();
-  for (let i=0;i<6;i++) {
-    const ax=cx+(Math.sin(i*73)-0.5)*r*0.9,ay=cy+(Math.sin(i*137)-0.5)*r*0.9;
-    ctx.beginPath();ctx.ellipse(ax,ay,Math.abs(5+Math.sin(i*17)*5),Math.abs(2+Math.sin(i*23)*4),i*0.5,0,Math.PI*2);
-    ctx.strokeStyle='rgba(180,80,0,0.3)';ctx.lineWidth=1;ctx.stroke();
-  }
-  [30,110,200,300].forEach(deg=>{
-    const a=deg*Math.PI/180,fx=cx+r*Math.cos(a),fy=cy+r*Math.sin(a);
-    ctx.beginPath();ctx.arc(fx,fy,3,0,Math.PI*2);ctx.fillStyle='rgba(255,253,200,0.9)';ctx.fill();
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  paintStars(document.getElementById('splash-canvas'));
+
+  // Clear any saved session — always start fresh
+  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+
+  // Show splash 1.5s then onboard
+  setTimeout(() => {
+    showScreen('onboard');
+    paintStars(document.getElementById('onboard-canvas'));
+    updateOb(0);
+  }, 1500);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-next')?.addEventListener('click', () => {
+    if (_obSlide < 3) updateOb(_obSlide + 1);
+    else { showScreen('auth'); paintStars(document.getElementById('auth-canvas')); switchTab('signup'); }
   });
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(255,220,0,0.85)';ctx.lineWidth=2;ctx.stroke();
-}
-
-// ── Keyboard ──────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeComments(); closeSearch(); closeProfile(); closeUpload(); closeInbox(); closeAdmin(); closeForgot(); }
+  document.getElementById('btn-skip')?.addEventListener('click', () => {
+    showScreen('auth'); paintStars(document.getElementById('auth-canvas')); switchTab('signup');
+  });
+  // Close comment sheet on backdrop tap
+  document.getElementById('c-sheet')?.addEventListener('click', e => { if(e.target.id==='c-sheet') closeComments(); });
+  // Enter key on comment
+  document.getElementById('c-input')?.addEventListener('keydown', e => { if(e.key==='Enter') postComment(); });
+  // Enter key on auth
+  document.getElementById('input-password')?.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
 });
 </script>
 </body>
