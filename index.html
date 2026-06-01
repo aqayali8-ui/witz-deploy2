@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WITZ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #080808;
+  --dark: #111111;
+  --card: #1a1a1a;
+  --border: #2a2a2a;
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --red: #e63946;
+  --white: #f0ede8;
+  --gray: #888;
+  --radius: 12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--black);color:var(--white);font-family:'Barlow',sans-serif;}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;background:var(--black);}
+.screen.active{display:flex;}
+
+/* ===== SPLASH ===== */
+#splash{background:#000;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#splash canvas{position:absolute;inset:0;opacity:0.5;}
+.splash-logo{position:relative;z-index:2;font-family:'Bebas Neue',sans-serif;font-size:96px;letter-spacing:8px;color:var(--gold);text-shadow:0 0 60px rgba(201,168,76,0.4);}
+.splash-sub{position:relative;z-index:2;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:6px;color:rgba(201,168,76,0.6);text-transform:uppercase;}
+.splash-bar{position:relative;z-index:2;width:120px;height:2px;background:var(--border);border-radius:1px;margin-top:24px;overflow:hidden;}
+.splash-bar-fill{height:100%;width:0;background:var(--gold);transition:width 0.1s linear;}
+
+/* ===== AUTH ===== */
+#auth{background:var(--black);align-items:center;justify-content:center;}
+#auth canvas{position:absolute;inset:0;opacity:0.3;}
+.auth-box{position:relative;z-index:2;width:100%;max-width:380px;padding:0 24px;}
+.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:6px;color:var(--gold);text-align:center;margin-bottom:4px;}
+.auth-tagline{text-align:center;font-size:11px;letter-spacing:4px;color:rgba(201,168,76,0.5);text-transform:uppercase;margin-bottom:36px;}
+.auth-tabs{display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--border);}
+.auth-tab{flex:1;padding:12px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;}
+.auth-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.auth-form{display:flex;flex-direction:column;gap:14px;}
+.auth-input{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;}
+.auth-input:focus{border-color:var(--gold);}
+.auth-input::placeholder{color:var(--gray);}
+.auth-btn{background:var(--gold);border:none;border-radius:8px;padding:15px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;font-weight:700;}
+.auth-btn:hover{background:var(--gold-light);}
+.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-guest{margin-top:12px;text-align:center;font-size:13px;color:var(--gray);}
+.auth-guest span{color:var(--gold);cursor:pointer;text-decoration:underline;}
+.auth-error{color:var(--red);font-size:13px;text-align:center;min-height:18px;}
+.field-wrap{display:none;}
+.field-wrap.show{display:block;}
+
+/* ===== MAIN APP ===== */
+#app{flex-direction:column;}
+
+/* TOP NAV */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--black);border-bottom:1px solid var(--border);z-index:100;flex-shrink:0;}
+.topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--gold);}
+.topbar-tabs{display:flex;gap:0;}
+.topbar-tab{padding:6px 16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+.topbar-tab.active{color:var(--white);border-bottom-color:var(--white);}
+.topbar-right{display:flex;gap:12px;align-items:center;}
+.icon-btn{background:none;border:none;color:var(--gray);cursor:pointer;padding:6px;border-radius:8px;transition:color 0.2s;display:flex;align-items:center;}
+.icon-btn:hover{color:var(--white);}
+svg{pointer-events:none;}
+
+/* REEL FEED */
+.feed{flex:1;overflow:hidden;position:relative;}
+.reel-container{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;}
+.reel-container::-webkit-scrollbar{display:none;}
+.reel{height:100%;width:100%;scroll-snap-align:start;position:relative;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.reel video{width:100%;height:100%;object-fit:cover;}
+.reel-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 40%,transparent 70%,rgba(0,0,0,0.3) 100%);}
+.reel-info{position:absolute;bottom:80px;left:16px;right:72px;}
+.reel-user{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--white);margin-bottom:6px;}
+.reel-caption{font-size:14px;color:rgba(255,255,255,0.85);line-height:1.4;}
+.reel-actions{position:absolute;bottom:80px;right:12px;display:flex;flex-direction:column;gap:20px;align-items:center;}
+.reel-action{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.reel-action-icon{width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.15);transition:all 0.2s;}
+.reel-action-icon:active{transform:scale(0.9);}
+.reel-action-icon.liked{background:rgba(230,57,70,0.3);border-color:var(--red);}
+.reel-action-count{font-size:12px;color:var(--white);font-weight:600;}
+.reel-mute{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.15);}
+.double-tap-heart{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:80px;opacity:0;transform:scale(0.5);transition:none;}
+.double-tap-heart.fire{opacity:1;transform:scale(1.2);transition:all 0.1s ease;}
+.double-tap-heart.fade{opacity:0;transform:scale(1.5);transition:all 0.4s ease;}
+.empty-feed{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;color:var(--gray);}
+.empty-feed-icon{font-size:48px;}
+.empty-feed p{font-size:16px;}
+
+/* BOTTOM NAV */
+.bottomnav{display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));background:var(--black);border-top:1px solid var(--border);flex-shrink:0;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 16px;border-radius:8px;transition:all 0.2s;color:var(--gray);}
+.nav-item.active{color:var(--white);}
+.nav-item span{font-size:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;}
+
+/* PANELS (full screen overlays) */
+.panel{position:fixed;inset:0;background:var(--black);z-index:200;display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);}
+.panel.open{transform:translateY(0);}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.panel-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:2px;text-transform:uppercase;color:var(--white);}
+.back-btn{background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+
+/* UPLOAD PANEL */
+#upload-panel .panel-body{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:20px;}
+.upload-drop{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.upload-drop:hover,.upload-drop.dragover{border-color:var(--gold);background:rgba(201,168,76,0.05);}
+.upload-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-drop-icon{font-size:40px;margin-bottom:12px;}
+.upload-drop-text{font-size:15px;color:var(--gray);}
+.upload-drop-sub{font-size:12px;color:rgba(136,136,136,0.6);margin-top:6px;}
+.upload-preview{width:100%;max-height:240px;border-radius:12px;object-fit:cover;display:none;}
+.upload-filename{font-size:13px;color:var(--gold);text-align:center;}
+.upload-textarea{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;resize:none;height:90px;outline:none;width:100%;}
+.upload-textarea:focus{border-color:var(--gold);}
+.upload-textarea::placeholder{color:var(--gray);}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
+.progress-fill{height:100%;width:0;background:var(--gold);transition:width 0.3s ease;}
+.progress-text{font-size:13px;color:var(--gold);text-align:center;}
+.btn-upload{background:var(--gold);border:none;border-radius:8px;padding:16px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;width:100%;font-weight:700;transition:all 0.2s;}
+.btn-upload:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* SEARCH PANEL */
+#search-panel .panel-body{flex:1;overflow-y:auto;padding:16px 20px;}
+.search-input-wrap{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:20px;}
+#search-field{flex:1;background:none;border:none;color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;outline:none;}
+#search-field::placeholder{color:var(--gray);}
+.search-results{display:flex;flex-direction:column;gap:12px;}
+.search-result-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;cursor:pointer;transition:background 0.2s;}
+.search-result-item:hover{background:var(--card);}
+.search-avatar{width:42px;height:42px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.search-info{flex:1;}
+.search-username{font-weight:600;font-size:15px;}
+.search-handle{font-size:13px;color:var(--gray);}
+
+/* PROFILE PANEL */
+#profile-panel .panel-body{flex:1;overflow-y:auto;}
+.profile-header{padding:24px 20px;text-align:center;border-bottom:1px solid var(--border);}
+.profile-avatar-big{width:80px;height:80px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 12px;border:2px solid var(--gold);}
+.profile-username{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:1px;}
+.profile-handle{font-size:14px;color:var(--gold);margin-top:2px;}
+.profile-stats{display:flex;justify-content:center;gap:32px;margin-top:16px;}
+.profile-stat{text-align:center;}
+.profile-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;}
+.profile-stat-label{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;}
+.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;}
+.profile-thumb{aspect-ratio:9/16;background:var(--card);overflow:hidden;cursor:pointer;position:relative;}
+.profile-thumb video,.profile-thumb img{width:100%;height:100%;object-fit:cover;}
+.profile-actions{display:flex;gap:12px;padding:16px 20px;}
+.btn-outline{flex:1;background:none;border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--white);font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{flex:1;background:none;border:1px solid rgba(230,57,70,0.3);border-radius:8px;padding:10px;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+
+/* COMMENTS PANEL */
+#comments-panel{transform:translateY(100%);}
+#comments-panel .panel-body{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:12px;}
+.comment-item{display:flex;gap:10px;}
+.comment-avatar{width:34px;height:34px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.comment-content{flex:1;}
+.comment-user{font-size:13px;font-weight:600;color:var(--gold);}
+.comment-text{font-size:14px;color:var(--white);margin-top:2px;line-height:1.4;}
+.comment-time{font-size:11px;color:var(--gray);margin-top:3px;}
+.comment-input-bar{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+.comment-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;outline:none;}
+.comment-input:focus{border-color:var(--gold);}
+.comment-send{background:var(--gold);border:none;border-radius:8px;padding:10px 16px;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;font-weight:700;}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,30,0.95);color:var(--white);padding:10px 20px;border-radius:20px;font-size:14px;opacity:0;transition:all 0.3s;z-index:999;white-space:nowrap;border:1px solid var(--border);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;height:100%;}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="screen active" id="splash">
+  <canvas id="splash-canvas"></canvas>
+  <div class="splash-logo">WITZ</div>
+  <div class="splash-sub">Before Rome. We Were First.</div>
+  <div class="splash-bar"><div class="splash-bar-fill" id="splash-fill"></div></div>
+</div>
+
+<!-- AUTH -->
+<div class="screen" id="auth">
+  <canvas id="auth-canvas"></canvas>
+  <div class="auth-box">
+    <div class="auth-logo">WITZ</div>
+    <div class="auth-tagline">Before Rome. We Were First.</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</div>
+    </div>
+    <div class="auth-form">
+      <div class="field-wrap show" id="field-username-wrap">
+        <input class="auth-input" id="field-username" type="text" placeholder="Username">
+      </div>
+      <input class="auth-input" id="field-email" type="email" placeholder="Email">
+      <input class="auth-input" id="field-password" type="password" placeholder="Password">
+      <div class="auth-error" id="auth-error"></div>
+      <button class="auth-btn" id="auth-submit-btn" onclick="authSubmit()">Sign In</button>
+    </div>
+    <div class="auth-guest">Just browsing? <span onclick="guestMode()">Continue as guest</span></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="screen" id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">WITZ</div>
+    <div class="topbar-tabs">
+      <div class="topbar-tab active" onclick="switchFeed(this,'foryou')">For You</div>
+      <div class="topbar-tab" onclick="switchFeed(this,'following')">Following</div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="openSearch()">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- REEL FEED -->
+  <div class="feed">
+    <div class="reel-container" id="reel-container">
+      <div class="loading" id="feed-loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <div class="nav-item active" onclick="navTo(this,'home')">
+      <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" onclick="navTo(this,'discover')">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Explore</span>
+    </div>
+    <div class="nav-item" onclick="openUpload()">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+      <span>Post</span>
+    </div>
+    <div class="nav-item" onclick="navTo(this,'notifications')">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>Alerts</span>
+    </div>
+    <div class="nav-item" onclick="openProfile()">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD PANEL -->
+<div class="panel" id="upload-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closeUpload()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <div class="panel-title">New Reel</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="upload-drop" id="upload-drop">
+      <input type="file" accept="video/*" id="file-pick" onchange="fileSelected(this)">
+      <div class="upload-drop-icon">🎬</div>
+      <div class="upload-drop-text">Tap to select video</div>
+      <div class="upload-drop-sub">MP4, MOV up to 500MB</div>
+    </div>
+    <video class="upload-preview" id="upload-preview" muted playsinline></video>
+    <div class="upload-filename" id="upload-file-name"></div>
+    <textarea class="upload-textarea" id="upload-caption" placeholder="Write a caption..."></textarea>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-text" id="progress-text"></div>
+    <button class="btn-upload" id="btn-upload" onclick="submitUpload()">Post Reel</button>
+  </div>
+</div>
+
+<!-- SEARCH PANEL -->
+<div class="panel" id="search-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closeSearch()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <div class="panel-title">Search</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="search-input-wrap">
+      <svg width="18" height="18" fill="none" stroke="#888" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search-field" placeholder="Search users..." oninput="searchUsers(this.value)">
+    </div>
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+
+<!-- PROFILE PANEL -->
+<div class="panel" id="profile-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closeProfile()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <div class="panel-title">Profile</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="profile-header">
+      <div class="profile-avatar-big" id="profile-avatar">👤</div>
+      <div class="profile-username" id="profile-username">---</div>
+      <div class="profile-handle" id="profile-handle">@---</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="profile-stat-num" id="profile-posts">0</div><div class="profile-stat-label">Posts</div></div>
+        <div class="profile-stat"><div class="profile-stat-num" id="profile-followers">0</div><div class="profile-stat-label">Followers</div></div>
+        <div class="profile-stat"><div class="profile-stat-num" id="profile-following">0</div><div class="profile-stat-label">Following</div></div>
+      </div>
+    </div>
+    <div class="profile-actions">
+      <button class="btn-outline" onclick="toast('Edit profile — coming soon')">Edit Profile</button>
+      <button class="btn-danger" onclick="logout()">Log Out</button>
+    </div>
+    <div class="profile-grid" id="profile-grid"></div>
+  </div>
+</div>
+
+<!-- COMMENTS PANEL -->
+<div class="panel" id="comments-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closeComments()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <div class="panel-title">Comments</div>
+    <div style="width:60px"></div>
+  </div>
+  <div class="panel-body" id="comments-list"></div>
+  <div class="comment-input-bar">
+    <input class="comment-input" id="comment-input" placeholder="Add a comment..." maxlength="300">
+    <button class="comment-send" onclick="postComment()">Post</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────
+const SUPABASE_URL = 'https://mimwbeexqskhefistbvt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_2uifA3Eov336vuKzE5mwJQ_XeJQgy3L';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ─────────────────────────────────────────────────
+let _user = null;
+let _profile = null;
+let _currentReelId = null;
+let _muted = true;
+let _isGuest = false;
+let _lastTap = 0;
+
+// ── SPLASH ────────────────────────────────────────────────
+(function initSplash() {
+  const canvas = document.getElementById('splash-canvas');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = Array.from({length: 200}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random() * 1.5 + 0.2,
+    o: Math.random()
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.o += (Math.random() - 0.5) * 0.02;
+      s.o = Math.max(0.1, Math.min(0.9, s.o));
+      ctx.beginPath();
+      ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${s.o})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── INIT ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  animateSplash();
+  const fill = document.getElementById('splash-fill');
+  let pct = 0;
+  const bar = setInterval(() => {
+    pct += 2;
+    fill.style.width = pct + '%';
+    if (pct >= 100) clearInterval(bar);
+  }, 30);
+
+  setTimeout(async () => {
+    const { data: { session } } = await _sb.auth.getSession();
+    if (session) {
+      _user = session.user;
+      await loadProfile();
+      showScreen('app');
+      loadFeed();
+    } else {
+      showScreen('auth');
+    }
+  }, 1800);
+});
+
+function animateSplash() {
+  const canvas = document.getElementById('auth-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  const stars = Array.from({length: 120}, () => ({x:Math.random(),y:Math.random(),r:Math.random()*1.2+0.2,o:Math.random()}));
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s => {
+      s.o += (Math.random()-0.5)*0.015;
+      s.o = Math.max(0.05, Math.min(0.7, s.o));
+      ctx.beginPath();
+      ctx.arc(s.x*canvas.width, s.y*canvas.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(201,168,76,${s.o})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── SCREEN ────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+let _authMode = 'login';
+
+function switchTab(mode) {
+  _authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('field-username-wrap').classList.toggle('show', mode === 'signup');
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function authSubmit() {
+  const email = document.getElementById('field-email').value.trim();
+  const password = document.getElementById('field-password').value;
+  const username = document.getElementById('field-username').value.trim();
+  const btn = document.getElementById('auth-submit-btn');
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = 'Enter email and password'; return; }
+  if (_authMode === 'signup' && !username) { errEl.textContent = 'Choose a username'; return; }
+  if (_authMode === 'signup' && username.length < 3) { errEl.textContent = 'Username must be 3+ characters'; return; }
+
+  btn.disabled = true;
+  btn.textContent = _authMode === 'login' ? 'Signing in...' : 'Creating account...';
+
+  if (_authMode === 'signup') {
+    const { data, error } = await _sb.auth.signUp({ email, password, options: { data: { username } } });
+    if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    if (data.user) {
+      // Create profile
+      await _sb.from('profiles').upsert({ id: data.user.id, username, avatar_url: null, created_at: new Date().toISOString() });
+      _user = data.user;
+      await loadProfile();
+      showScreen('app');
+      loadFeed();
+    }
+  } else {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Sign In'; return; }
+    _user = data.user;
+    await loadProfile();
+    showScreen('app');
+    loadFeed();
+  }
+}
+
+function guestMode() {
+  _isGuest = true;
+  _user = null;
+  showScreen('app');
+  loadFeed();
+}
+
+async function loadProfile() {
+  if (!_user) return;
+  const { data } = await _sb.from('profiles').select('*').eq('id', _user.id).single();
+  if (data) {
+    _profile = data;
+  } else {
+    // Auto-create profile from auth metadata
+    const meta = _user.user_metadata || {};
+    const username = meta.username || _user.email.split('@')[0];
+    const { data: newProf } = await _sb.from('profiles').upsert({ id: _user.id, username, avatar_url: null }).select().single();
+    _profile = newProf;
+  }
+}
+
+function logout() {
+  _sb.auth.signOut();
+  _user = null; _profile = null; _isGuest = false;
+  closeProfile();
+  document.getElementById('feed-loading').style.display = 'flex';
+  document.getElementById('reel-container').innerHTML = '<div class="loading" id="feed-loading"><div class="spinner"></div></div>';
+  showScreen('auth');
+  switchTab('login');
+}
+
+// ── FEED ──────────────────────────────────────────────────
+async function loadFeed() {
+  const container = document.getElementById('reel-container');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const { data: videos, error } = await _sb.from('videos')
+    .select('*, profiles(username, avatar_url)')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error || !videos || videos.length === 0) {
+    container.innerHTML = `<div class="empty-feed">
+      <div class="empty-feed-icon">🎬</div>
+      <p>No reels yet. Be first to post!</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  videos.forEach(v => container.appendChild(buildReel(v)));
+}
+
+function buildReel(v) {
+  const div = document.createElement('div');
+  div.className = 'reel';
+  div.dataset.id = v.id;
+  const username = v.profiles?.username || 'witz_user';
+  const videoUrl = v.url;
+
+  div.innerHTML = `
+    <video src="${videoUrl}" loop playsinline ${_muted ? 'muted' : ''} style="width:100%;height:100%;object-fit:cover;"></video>
+    <div class="reel-overlay"></div>
+    <div class="double-tap-heart" id="heart-${v.id}">❤️</div>
+    <div class="reel-mute" onclick="toggleMute()">
+      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" id="mute-icon-${v.id}">
+        <path d="${_muted ? 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z' : 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'}"/>
+      </svg>
+    </div>
+    <div class="reel-info">
+      <div class="reel-user">@${username}</div>
+      <div class="reel-caption">${v.caption || ''}</div>
+    </div>
+    <div class="reel-actions">
+      <div class="reel-action" onclick="toggleLike('${v.id}', this)">
+        <div class="reel-action-icon" id="like-icon-${v.id}">
+          <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="reel-action-count" id="like-count-${v.id}">0</div>
+      </div>
+      <div class="reel-action" onclick="openComments('${v.id}')">
+        <div class="reel-action-icon">
+          <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="reel-action-count" id="comment-count-${v.id}">0</div>
+      </div>
+      <div class="reel-action" onclick="shareReel('${v.id}')">
+        <div class="reel-action-icon">
+          <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </div>
+        <div class="reel-action-count">Share</div>
+      </div>
+    </div>
+  `;
+
+  // Double tap to like
+  const videoEl = div.querySelector('video');
+  videoEl.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - _lastTap < 300) {
+      triggerDoubleTapHeart(v.id);
+    } else {
+      // Single tap: play/pause
+      videoEl.paused ? videoEl.play() : videoEl.pause();
+    }
+    _lastTap = now;
+  });
+
+  // Load counts
+  loadCounts(v.id);
+  return div;
+}
+
+async function loadCounts(videoId) {
+  const { count: likes } = await _sb.from('likes').select('*', { count: 'exact', head: true }).eq('video_id', videoId);
+  const { count: comments } = await _sb.from('comments').select('*', { count: 'exact', head: true }).eq('video_id', videoId);
+  const likeEl = document.getElementById(`like-count-${videoId}`);
+  const commentEl = document.getElementById(`comment-count-${videoId}`);
+  if (likeEl) likeEl.textContent = likes || 0;
+  if (commentEl) commentEl.textContent = comments || 0;
+
+  // Check if current user liked
+  if (_user) {
+    const { data } = await _sb.from('likes').select('id').eq('video_id', videoId).eq('user_id', _user.id).single();
+    if (data) document.getElementById(`like-icon-${videoId}`)?.classList.add('liked');
+  }
+}
+
+// Intersection Observer for autoplay
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const video = entry.target.querySelector('video');
+    if (!video) return;
+    if (entry.isIntersecting) {
+      video.play().catch(() => {});
+      _currentReelId = entry.target.dataset.id;
+    } else {
+      video.pause();
+    }
+  });
+}, { threshold: 0.6 });
+
+// Observe reels after load
+const origLoadFeed = loadFeed;
+loadFeed = async function() {
+  await origLoadFeed();
+  document.querySelectorAll('.reel').forEach(r => observer.observe(r));
+};
+
+// ── LIKE ─────────────────────────────────────────────────
+async function toggleLike(videoId, el) {
+  if (_isGuest || !_user) { toast('Sign in to like'); return; }
+  const icon = document.getElementById(`like-icon-${videoId}`);
+  const countEl = document.getElementById(`like-count-${videoId}`);
+  const isLiked = icon.classList.contains('liked');
+
+  if (isLiked) {
+    await _sb.from('likes').delete().eq('video_id', videoId).eq('user_id', _user.id);
+    icon.classList.remove('liked');
+    icon.querySelector('svg').setAttribute('stroke', 'white');
+    icon.querySelector('svg').setAttribute('fill', 'none');
+    countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+  } else {
+    await _sb.from('likes').insert({ video_id: videoId, user_id: _user.id });
+    icon.classList.add('liked');
+    icon.querySelector('svg').setAttribute('stroke', '#e63946');
+    icon.querySelector('svg').setAttribute('fill', '#e63946');
+    countEl.textContent = parseInt(countEl.textContent) + 1;
+  }
+}
+
+function triggerDoubleTapHeart(videoId) {
+  const heart = document.getElementById(`heart-${videoId}`);
+  if (!heart) return;
+  heart.classList.remove('fire', 'fade');
+  void heart.offsetWidth;
+  heart.classList.add('fire');
+  setTimeout(() => { heart.classList.add('fade'); }, 300);
+  setTimeout(() => { heart.classList.remove('fire','fade'); }, 900);
+  if (_user) {
+    _sb.from('likes').upsert({ video_id: videoId, user_id: _user.id }).then(() => loadCounts(videoId));
+  }
+}
+
+// ── MUTE ─────────────────────────────────────────────────
+function toggleMute() {
+  _muted = !_muted;
+  document.querySelectorAll('.reel video').forEach(v => { v.muted = _muted; });
+}
+
+// ── UPLOAD ───────────────────────────────────────────────
+function openUpload() {
+  if (_isGuest || !_user) { toast('Sign in to post'); return; }
+  document.getElementById('upload-panel').classList.add('open');
+}
+function closeUpload() {
+  document.getElementById('upload-panel').classList.remove('open');
+  document.getElementById('file-pick').value = '';
+  document.getElementById('upload-file-name').textContent = '';
+  document.getElementById('upload-caption').value = '';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-preview').src = '';
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0';
+  document.getElementById('progress-text').textContent = '';
+  document.getElementById('btn-upload').disabled = false;
+}
+
+function fileSelected(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+  document.getElementById('upload-file-name').textContent = file.name.substring(0, 40);
+  const preview = document.getElementById('upload-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+  toast('Video selected ✓');
+}
+
+async function submitUpload() {
+  const file = document.getElementById('file-pick').files[0];
+  const caption = document.getElementById('upload-caption').value.trim();
+  if (!file) { toast('Select a video first'); return; }
+  if (!_user) { toast('Sign in to post'); return; }
+
+  const btn = document.getElementById('btn-upload');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  document.getElementById('progress-bar').style.display = 'block';
+  document.getElementById('progress-text').textContent = 'Uploading video...';
+
+  const ext = file.name.split('.').pop();
+  const path = `${_user.id}/${Date.now()}.${ext}`;
+
+  // Upload to Supabase Storage
+  const { data: storageData, error: storageErr } = await _sb.storage
+    .from('videos')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+
+  if (storageErr) {
+    toast('Upload failed: ' + storageErr.message);
+    btn.disabled = false;
+    btn.textContent = 'Post Reel';
+    document.getElementById('progress-bar').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('progress-fill').style.width = '70%';
+  document.getElementById('progress-text').textContent = 'Saving post...';
+
+  // Get public URL
+  const { data: { publicUrl } } = _sb.storage.from('videos').getPublicUrl(path);
+
+  // Save to videos table
+  const { error: dbErr } = await _sb.from('videos').insert({
+    user_id: _user.id,
+    url: publicUrl,
+    caption: caption || '',
+    created_at: new Date().toISOString()
+  });
+
+  if (dbErr) {
+    toast('Save failed: ' + dbErr.message);
+    btn.disabled = false;
+    btn.textContent = 'Post Reel';
+    return;
+  }
+
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-text').textContent = 'Posted!';
+
+  setTimeout(() => {
+    closeUpload();
+    toast('🔥 Reel posted to WITZ!');
+    loadFeed();
+  }, 600);
+}
+
+// ── COMMENTS ─────────────────────────────────────────────
+async function openComments(videoId) {
+  _currentReelId = videoId;
+  document.getElementById('comments-panel').classList.add('open');
+  const list = document.getElementById('comments-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const { data } = await _sb.from('comments')
+    .select('*, profiles(username)')
+    .eq('video_id', videoId)
+    .order('created_at', { ascending: true });
+
+  list.innerHTML = '';
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--gray);padding:40px 20px;font-size:14px;">No comments yet. Be first!</div>';
+    return;
+  }
+  data.forEach(c => {
+    const username = c.profiles?.username || 'user';
+    const timeAgo = getTimeAgo(c.created_at);
+    const el = document.createElement('div');
+    el.className = 'comment-item';
+    el.innerHTML = `
+      <div class="comment-avatar">${username[0].toUpperCase()}</div>
+      <div class="comment-content">
+        <div class="comment-user">@${username}</div>
+        <div class="comment-text">${escapeHtml(c.text)}</div>
+        <div class="comment-time">${timeAgo}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+function closeComments() {
+  document.getElementById('comments-panel').classList.remove('open');
+  document.getElementById('comment-input').value = '';
+}
+
+async function postComment() {
+  if (_isGuest || !_user) { toast('Sign in to comment'); return; }
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text || !_currentReelId) return;
+  input.value = '';
+
+  const { error } = await _sb.from('comments').insert({
+    video_id: _currentReelId,
+    user_id: _user.id,
+    text,
+    created_at: new Date().toISOString()
+  });
+
+  if (!error) {
+    openComments(_currentReelId);
+    // Update count
+    const countEl = document.getElementById(`comment-count-${_currentReelId}`);
+    if (countEl) countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+  }
+}
+
+// ── PROFILE ───────────────────────────────────────────────
+async function openProfile() {
+  if (_isGuest || !_user) { toast('Sign in to view profile'); switchTab('login'); showScreen('auth'); return; }
+  document.getElementById('profile-panel').classList.add('open');
+  if (_profile) {
+    document.getElementById('profile-username').textContent = _profile.username || 'User';
+    document.getElementById('profile-handle').textContent = '@' + (_profile.username || 'user').toLowerCase();
+    document.getElementById('profile-avatar').textContent = (_profile.username || 'U')[0].toUpperCase();
+  }
+  // Load post count
+  const { count: postCount } = await _sb.from('videos').select('*', { count: 'exact', head: true }).eq('user_id', _user.id);
+  document.getElementById('profile-posts').textContent = postCount || 0;
+
+  // Load videos for grid
+  const { data: vids } = await _sb.from('videos').select('*').eq('user_id', _user.id).order('created_at', { ascending: false }).limit(9);
+  const grid = document.getElementById('profile-grid');
+  grid.innerHTML = '';
+  (vids || []).forEach(v => {
+    const url = v.url;
+    const thumb = document.createElement('div');
+    thumb.className = 'profile-thumb';
+    thumb.innerHTML = `<video src="${url}" muted playsinline preload="metadata"></video>`;
+    grid.appendChild(thumb);
+  });
+}
+function closeProfile() { document.getElementById('profile-panel').classList.remove('open'); }
+
+// ── SEARCH ────────────────────────────────────────────────
+function openSearch() { document.getElementById('search-panel').classList.add('open'); setTimeout(() => document.getElementById('search-field').focus(), 300); }
+function closeSearch() { document.getElementById('search-panel').classList.remove('open'); document.getElementById('search-field').value = ''; document.getElementById('search-results').innerHTML = ''; }
+
+let _searchTimer;
+async function searchUsers(q) {
+  clearTimeout(_searchTimer);
+  const results = document.getElementById('search-results');
+  if (!q.trim()) { results.innerHTML = ''; return; }
+  _searchTimer = setTimeout(async () => {
+    const { data } = await _sb.from('profiles').select('*').ilike('username', `%${q}%`).limit(10);
+    results.innerHTML = '';
+    (data || []).forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'search-result-item';
+      el.innerHTML = `<div class="search-avatar">${p.username[0].toUpperCase()}</div><div class="search-info"><div class="search-username">${p.username}</div><div class="search-handle">@${p.username.toLowerCase()}</div></div>`;
+      results.appendChild(el);
+    });
+    if (!data || data.length === 0) results.innerHTML = '<div style="color:var(--gray);text-align:center;padding:20px;font-size:14px;">No users found</div>';
+  }, 300);
+}
+
+// ── NAV ───────────────────────────────────────────────────
+function switchFeed(el, tab) {
+  document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab === 'following' && (_isGuest || !_user)) { toast('Sign in to see following'); return; }
+  toast(tab === 'following' ? 'Following feed' : 'For You');
+}
+function navTo(el, section) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  if (section === 'home') return;
+  if (section === 'discover') { openSearch(); return; }
+  if (section === 'notifications') { toast('Notifications — coming soon'); return; }
+}
+
+// ── SHARE ─────────────────────────────────────────────────
+function shareReel(id) {
+  const url = `https://witz-deploy2.vercel.app/#reel-${id}`;
+  if (navigator.share) {
+    navigator.share({ title: 'WITZ Reel', url });
+  } else {
+    navigator.clipboard.writeText(url).then(() => toast('Link copied!'));
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function getTimeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs/24)}d ago`;
+}
+</script>
+</body>
+</html>
