@@ -768,6 +768,7 @@ function paintStars(canvas, sunX, sunY, sunR) {
     ctx.beginPath();
     ctx.ellipse(ax,ay,Math.abs(5+Math.sin(i*17)*5),Math.abs(2+Math.sin(i*23)*4),i*0.5,0,Math.PI*2);
     ctx.strokeStyle=`rgba(180,80,0,0.3)`; ctx.lineWidth=1; ctx.stroke();
+  }
 
   // Flares + rim
   [30,110,200,300].forEach(deg=>{
