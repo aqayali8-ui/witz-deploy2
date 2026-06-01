@@ -489,7 +489,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
         <input class="auth-input" type="password" id="input-password" placeholder="••••••••">
       </div>
       <button class="btn-enter" id="btn-auth" onclick="authSubmit()">ENTER</button>
-      <div style="text-align:center;margin-top:8px;"><span onclick="openForgot()" style="font-size:11px;color:#3a5a7c;cursor:pointer;letter-spacing:1px;">FORGOT PASSWORD?</span></div>
+      <div style="text-align:center;margin-top:8px;display:flex;justify-content:space-between;padding:0 4px;">
+        <span onclick="openForgot()" style="font-size:11px;color:#3a5a7c;cursor:pointer;letter-spacing:1px;">FORGOT PASSWORD?</span>
+        <span onclick="switchTab('signup')" style="font-size:11px;color:#4a9eff;cursor:pointer;letter-spacing:1px;">NEW? JOIN WITZ →</span>
+      </div>
       <div class="auth-or">— OR —</div>
       <button class="btn-guest" id="btn-guest">CONTINUE AS GUEST</button>
     </div>
@@ -784,7 +787,12 @@ let _sb, _user = null, _profile = null, _currentVideoId = null, _isMuted = true,
 
 function initSB() {
   if (!_sb && typeof supabase !== 'undefined') {
-    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    try {
+      _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch(e) {
+      console.error('Supabase init error:', e);
+      _sb = null;
+    }
   }
   return _sb;
 }
@@ -798,11 +806,11 @@ function switchTab(mode) {
   document.getElementById('tab-login')?.classList.toggle('active', mode === 'login');
   document.getElementById('tab-signup')?.classList.toggle('active', mode === 'signup');
   const uw = document.getElementById('field-username-wrap') || document.getElementById('uname-wrap');
-  if (uw) uw.style.display = mode === 'signup' ? 'block' : 'none';
+  if (uw) uw.style.setProperty('display', mode === 'signup' ? 'block' : 'none', 'important');
   const btn = document.getElementById('btn-auth');
   if (btn) btn.textContent = mode === 'login' ? 'ENTER' : 'JOIN WITZ';
   const err = document.getElementById('auth-err');
-  if (err) err.textContent = '';
+  if (err) { err.textContent = ''; err.classList.remove('show'); }
 }
 
 // ── Auth submit ───────────────────────────────────────────
@@ -827,15 +835,46 @@ function authSubmit() {
     sb.auth.signUp({ email, password: pass, options: { data: { username: uname } } })
       .then(({ data, error }) => {
         if (error) {
+          // If already registered, just try to sign in
+          if (error.message && error.message.toLowerCase().includes('already')) {
+            sb.auth.signInWithPassword({ email, password: pass }).then(({ data: d2, error: e2 }) => {
+              if (e2) { if (errEl) errEl.textContent = 'Account exists — check your password.'; if (btn) { btn.disabled=false; btn.textContent='JOIN WITZ'; } return; }
+              _user = d2.user;
+              sb.from('profiles').select('*').eq('id', _user.id).single().then(({ data: prof }) => {
+                _profile = prof; username = (prof?.username || email.split('@')[0]).toUpperCase(); enterApp();
+              }).catch(() => { username = uname.toUpperCase(); enterApp(); });
+            });
+            return;
+          }
           if (errEl) errEl.textContent = error.message;
           if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
           return;
         }
-        if (data.user) {
-          sb.from('profiles').upsert({ id: data.user.id, username: uname });
-          _user = data.user; _profile = { username: uname };
+        // If we got a session immediately (email confirm disabled in Supabase)
+        if (data.session) {
+          _user = data.user;
+          sb.from('profiles').upsert({ id: data.user.id, username: uname }).catch(()=>{});
+          _profile = { username: uname };
           username = uname.toUpperCase();
           enterApp();
+        } else if (data.user) {
+          // Email confirmation may be required — try signing in anyway
+          sb.auth.signInWithPassword({ email, password: pass }).then(({ data: d2, error: e2 }) => {
+            if (!e2 && d2.session) {
+              _user = d2.user;
+              sb.from('profiles').upsert({ id: d2.user.id, username: uname }).catch(()=>{});
+              _profile = { username: uname };
+              username = uname.toUpperCase();
+              enterApp();
+            } else {
+              if (errEl) errEl.textContent = 'Account created! Check your email, then log in.';
+              if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
+              setTimeout(() => switchTab('login'), 3000);
+            }
+          });
+        } else {
+          if (errEl) errEl.textContent = 'Something went wrong. Try again.';
+          if (btn) { btn.disabled = false; btn.textContent = 'JOIN WITZ'; }
         }
       });
   } else {
@@ -859,15 +898,38 @@ function authSubmit() {
 
 // ── Session restore ───────────────────────────────────────
 window.addEventListener('load', () => {
-  // Fallback: if supabase still not loaded after 3s, just show onboard
-  setTimeout(() => {
-    if (typeof supabase === 'undefined') {
+  // Hard fallback: if nothing happens in 4s, go to onboard
+  const _fallback = setTimeout(() => {
+    if (document.getElementById('splash').classList.contains('active') ||
+        !document.querySelector('.screen.active')) {
       showScreen('onboard');
     }
-  }, 3000);
+  }, 4000);
+
   const sb = initSB();
-  if (!sb) { showScreen('splash'); return; }
+  if (!sb) {
+    // supabase library not loaded yet — wait up to 3s for it
+    let attempts = 0;
+    const wait = setInterval(() => {
+      attempts++;
+      const sb2 = initSB();
+      if (sb2) {
+        clearInterval(wait);
+        _doSessionCheck(sb2, _fallback);
+      } else if (attempts > 15) {
+        clearInterval(wait);
+        clearTimeout(_fallback);
+        showScreen('onboard');
+      }
+    }, 200);
+    return;
+  }
+  _doSessionCheck(sb, _fallback);
+});
+
+function _doSessionCheck(sb, _fallback) {
   sb.auth.getSession().then(({ data: { session } }) => {
+    clearTimeout(_fallback);
     if (session) {
       _user = session.user;
       sb.from('profiles').select('*').eq('id', _user.id).single()
@@ -875,13 +937,16 @@ window.addEventListener('load', () => {
           _profile = prof;
           username = (prof?.username || _user.email.split('@')[0]).toUpperCase();
           enterApp();
-        });
+        }).catch(() => enterApp());
     } else {
       showScreen('splash');
       setTimeout(() => showScreen('onboard'), 1500);
     }
+  }).catch(() => {
+    clearTimeout(_fallback);
+    showScreen('onboard');
   });
-});
+}
 
 // ── Enter app ─────────────────────────────────────────────
 function enterApp() {
