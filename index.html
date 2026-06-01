@@ -930,6 +930,12 @@ async function realEnterApp() {
     _profile = prof;
     username = (prof?.username || _user.email.split('@')[0]).toUpperCase();
     realEnterApp();
+  } else {
+    // No session - if already on app screen, load feed anyway
+    const appScreen = document.getElementById('app');
+    if (appScreen && appScreen.classList.contains('active')) {
+      loadRealFeed();
+    }
   }
 })();
 
@@ -938,10 +944,15 @@ async function loadRealFeed() {
   const container = document.getElementById('reel-container');
   if (!container) return;
   container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;">Loading reels...</div>';
-  const { data: videos } = await _sb.from('videos')
-    .select('*, profiles(username)')
-    .order('created_at', { ascending: false })
-    .limit(20);
+  let videos = null;
+  try {
+    const res = await _sb.from('videos')
+      .select('*, profiles(username)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    videos = res.data;
+    console.log('WITZ feed fetch:', JSON.stringify(res));
+  } catch(e) { console.error('WITZ feed error:', e); }
   if (!videos || videos.length === 0) {
     container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#aaa;gap:12px;"><div style="font-size:40px">🎬</div><div>No reels yet. Post the first one!</div></div>';
     return;
