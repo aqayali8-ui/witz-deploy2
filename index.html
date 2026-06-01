@@ -1016,6 +1016,33 @@ async function likeVideo(videoId, el) {
   loadVideoCounts(videoId);
 }
 
+
+// ── UPLOAD PANEL CONTROLS ─────────────────────────────────
+function openUpload() {
+  if (!_user) { toast('Sign in to post'); return; }
+  const panel = document.getElementById('upload-panel');
+  if (panel) { panel.classList.add('open'); panel.style.display = 'flex'; }
+}
+
+function closeUpload() {
+  const panel = document.getElementById('upload-panel');
+  if (panel) { panel.classList.remove('open'); panel.style.display = 'none'; }
+  const filePick = document.getElementById('file-pick');
+  const caption = document.getElementById('upload-caption');
+  const fname = document.getElementById('upload-file-name');
+  if (filePick) filePick.value = '';
+  if (caption) caption.value = '';
+  if (fname) fname.textContent = 'MP4, MOV up to 500MB';
+}
+
+function fileSelected(inp) {
+  if (inp.files && inp.files[0]) {
+    const fname = document.getElementById('upload-file-name');
+    if (fname) fname.textContent = inp.files[0].name.substring(0, 40);
+    toast('Video selected ✓');
+  }
+}
+
 // ── REAL UPLOAD ───────────────────────────────────────────
 async function submitUpload() {
   const cap = document.getElementById('upload-caption').value.trim();
