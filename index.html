@@ -878,7 +878,7 @@ window.addEventListener('load', () => {
         });
     } else {
       showScreen('splash');
-      setTimeout(() => showScreen('onboard'), 2200);
+      setTimeout(() => showScreen('onboard'), 1500);
     }
   });
 });
@@ -924,6 +924,10 @@ function showScreen(id) {
   if (el) el.classList.add('active');
   repaintForScreen(id);
 }
+function showAuth(mode) {
+  showScreen('auth');
+  switchTab(mode || 'signup');
+}
 
 function repaintForScreen(id) {
   const map = { splash:'splash-canvas', onboard:'onboard-canvas', auth:'auth-canvas', app:'app-canvas' };
@@ -943,9 +947,9 @@ function updateOb(i) {
 document.addEventListener('DOMContentLoaded', () => {
   updateOb(0);
   document.getElementById('btn-next')?.addEventListener('click', () => {
-    if (_obSlide < 3) updateOb(_obSlide + 1); else showScreen('auth');
+    if (_obSlide < 3) updateOb(_obSlide + 1); else { showScreen('auth'); switchTab('signup'); }
   });
-  document.getElementById('btn-skip')?.addEventListener('click', () => showScreen('auth'));
+  document.getElementById('btn-skip')?.addEventListener('click', () => { showScreen('auth'); switchTab('signup'); });
   document.getElementById('btn-guest')?.addEventListener('click', () => {
     username = 'GUEST'; setTimeout(() => enterApp(), 400);
   });
