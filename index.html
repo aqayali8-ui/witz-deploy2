@@ -853,7 +853,7 @@ function authSubmit() {
         // If we got a session immediately (email confirm disabled in Supabase)
         if (data.session) {
           _user = data.user;
-          try { await sb.from('profiles').upsert({ id: data.user.id, username: uname }); } catch(e) {}
+          sb.from('profiles').upsert({ id: data.user.id, username: uname }).then(()=>{}).catch(()=>{});
           _profile = { username: uname };
           username = uname.toUpperCase();
           enterApp();
@@ -862,7 +862,7 @@ function authSubmit() {
           sb.auth.signInWithPassword({ email, password: pass }).then(({ data: d2, error: e2 }) => {
             if (!e2 && d2.session) {
               _user = d2.user;
-              try { await sb.from('profiles').upsert({ id: d2.user.id, username: uname }); } catch(e) {}
+              sb.from('profiles').upsert({ id: d2.user.id, username: uname }).then(()=>{}).catch(()=>{});
               _profile = { username: uname };
               username = uname.toUpperCase();
               enterApp();
