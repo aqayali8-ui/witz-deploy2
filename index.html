@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WITZ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -858,6 +859,12 @@ function authSubmit() {
 
 // ── Session restore ───────────────────────────────────────
 window.addEventListener('load', () => {
+  // Fallback: if supabase still not loaded after 3s, just show onboard
+  setTimeout(() => {
+    if (typeof supabase === 'undefined') {
+      showScreen('onboard');
+    }
+  }, 3000);
   const sb = initSB();
   if (!sb) { showScreen('splash'); return; }
   sb.auth.getSession().then(({ data: { session } }) => {
