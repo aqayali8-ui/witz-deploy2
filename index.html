@@ -928,23 +928,12 @@ window.addEventListener('load', () => {
 });
 
 function _doSessionCheck(sb, _fallback) {
-  sb.auth.getSession().then(({ data: { session } }) => {
+  // Always sign out any saved session — every visitor must go through splash → onboard → auth
+  sb.auth.signOut().catch(() => {}).finally(() => {
     clearTimeout(_fallback);
-    if (session) {
-      _user = session.user;
-      sb.from('profiles').select('*').eq('id', _user.id).single()
-        .then(({ data: prof }) => {
-          _profile = prof;
-          username = (prof?.username || _user.email.split('@')[0]).toUpperCase();
-          enterApp();
-        }).catch(() => enterApp());
-    } else {
-      showScreen('splash');
-      setTimeout(() => showScreen('onboard'), 1500);
-    }
-  }).catch(() => {
-    clearTimeout(_fallback);
-    showScreen('onboard');
+    _user = null; _profile = null;
+    showScreen('splash');
+    setTimeout(() => showScreen('onboard'), 1500);
   });
 }
 
