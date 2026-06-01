@@ -3,6 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Early stubs — prevent "not defined" errors during HTML parse
+// These get overridden by the real functions in the main script
+function openUpload(){setTimeout(()=>{if(typeof _openUpload==='function')_openUpload();},50);}
+function openSearch(){setTimeout(()=>{if(typeof _openSearch==='function')_openSearch();},50);}
+function openProfile(){setTimeout(()=>{if(typeof _openProfile==='function')_openProfile();},50);}
+function openInbox(){setTimeout(()=>{if(typeof _openInbox==='function')_openInbox();},50);}
+function closeComments(){setTimeout(()=>{if(typeof _closeComments==='function')_closeComments();},50);}
+function closeSearch(){setTimeout(()=>{if(typeof _closeSearch==='function')_closeSearch();},50);}
+function navTo(el,s){setTimeout(()=>{if(typeof _navTo==='function')_navTo(el,s);},50);}
+function switchFeed(el,t){setTimeout(()=>{if(typeof _switchFeed==='function')_switchFeed(el,t);},50);}
+function toggleFollow(){toast&&toast('Follow — coming soon');}
+function shareReel(){;}
+function nextReel(){const w=document.querySelector('.reel-wrap');if(w)w.scrollBy(0,window.innerHeight);}
+function prevReel(){const w=document.querySelector('.reel-wrap');if(w)w.scrollBy(0,-window.innerHeight);}
+function toast(m){const t=document.getElementById('toast');if(!t){console.log(m);return;}t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+function switchTab(mode){
+  const tl=document.getElementById('tab-login');
+  const ts=document.getElementById('tab-signup');
+  const uw=document.getElementById('field-username-wrap')||document.getElementById('uname-wrap');
+  const btn=document.getElementById('btn-auth');
+  if(tl)tl.classList.toggle('active',mode==='login');
+  if(ts)ts.classList.toggle('active',mode==='signup');
+  if(uw)uw.style.display=mode==='signup'?'block':'none';
+  if(btn)btn.textContent=mode==='login'?'ENTER':'JOIN WITZ';
+  window._authMode=mode;
+}
+function goToSignUp(){
+  const b=document.getElementById('signin-banner');
+  if(b)b.style.display='none';
+  const auth=document.getElementById('auth');
+  if(auth){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));auth.classList.add('active');}
+  switchTab('signup');
+}
+function authSubmit(){
+  const mode=window._authMode||'login';
+  const email=document.getElementById('input-email')?.value.trim();
+  const pass=document.getElementById('input-password')?.value;
+  const uname=document.getElementById('input-username')?.value?.trim();
+  const errEl=document.getElementById('auth-err');
+  const btn=document.getElementById('btn-auth');
+  if(errEl)errEl.textContent='';
+  if(!email||!pass){if(errEl)errEl.textContent='Enter email and password.';return;}
+  if(btn){btn.disabled=true;btn.textContent='LOADING...';}
+  const client=window._sb||supabase.createClient('https://mimwbeexqskhefistbvt.supabase.co','sb_publishable_2uifA3Eov336vuKzE5mwJQ_XeJQgy3L');
+  if(mode==='signup'){
+    if(!uname||uname.length<2){if(errEl)errEl.textContent='Choose a username (2+ chars).';if(btn){btn.disabled=false;btn.textContent='JOIN WITZ';}return;}
+    client.auth.signUp({email,password:pass,options:{data:{username:uname}}}).then(({data,error})=>{
+      if(error){if(errEl)errEl.textContent=error.message;if(btn){btn.disabled=false;btn.textContent='JOIN WITZ';}return;}
+      if(data.user){
+        client.from('profiles').upsert({id:data.user.id,username:uname});
+        window._user=data.user;window._profile={username:uname};window.username=uname.toUpperCase();
+        if(typeof enterApp==='function')enterApp();
+      }
+    });
+  }else{
+    client.auth.signInWithPassword({email,password:pass}).then(({data,error})=>{
+      if(error){if(errEl)errEl.textContent=error.message;if(btn){btn.disabled=false;btn.textContent='ENTER';}return;}
+      window._user=data.user;
+      client.from('profiles').select('*').eq('id',data.user.id).single().then(({data:prof})=>{
+        window._profile=prof;window.username=((prof?.username||data.user.email.split('@')[0])).toUpperCase();
+        if(typeof enterApp==='function')enterApp();
+      });
+    });
+  }
+}
+function showSignInBanner(msg){
+  const b=document.getElementById('signin-banner');
+  if(!b)return;
+  const m=b.querySelector('.signin-banner-msg');
+  if(m)m.textContent=msg;
+  b.style.display='flex';
+  setTimeout(()=>{b.style.display='none';},4000);
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WITZ</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -499,7 +574,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
         <span class="field-label">PASSWORD</span>
         <input class="auth-input" type="password" id="input-password" placeholder="••••••••">
       </div>
-      <button class="btn-enter" id="btn-auth">ENTER</button>
+      <button class="btn-enter" id="btn-auth" onclick="authSubmit()">ENTER</button>
       <div class="auth-or">— OR —</div>
       <button class="btn-guest" id="btn-guest">CONTINUE AS GUEST</button>
     </div>
@@ -743,6 +818,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Barlow',sans-serif
 </div>
 
 <script>
+// ── OVERRIDE STUBS with real functions ───────────────────
+// (stubs defined above prevent "not defined" on early renders)
+
 // ── SUPABASE ─────────────────────────────────────────────
 const _sb = supabase.createClient('https://mimwbeexqskhefistbvt.supabase.co', 'sb_publishable_2uifA3Eov336vuKzE5mwJQ_XeJQgy3L');
 let _user = null, _profile = null, _currentVideoId = null, _isMuted = true;
