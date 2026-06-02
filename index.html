@@ -234,6 +234,14 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .btn-upload{width:100%;padding:15px;background:var(--royal);border:none;border-radius:10px;color:var(--white);font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;transition:.2s;}
 .btn-upload:disabled{opacity:0.6;cursor:not-allowed;}
 /* admin */
+.admin-tab{flex:1;padding:10px;background:transparent;border:none;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;cursor:pointer;transition:.2s;}
+.admin-tab.active{background:#1a3a8f;color:#fff;}
+.admin-card{background:#0a1230;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;border:1px solid #0f1e30;}
+.admin-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.abtn{border:none;border-radius:6px;padding:6px 10px;font-family:'Barlow Condensed';font-size:11px;letter-spacing:1px;cursor:pointer;white-space:nowrap;}
+.abtn-del{background:rgba(139,0,0,0.3);color:#ff6666;border:1px solid #8b000055;}
+.abtn-ban{background:rgba(180,100,0,0.3);color:#ffaa44;border:1px solid #b4640055;}
+.abtn-unban{background:rgba(0,100,50,0.3);color:#44ff99;border:1px solid #00643255;}
 .admin-row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #0f1e30;}
 /* sign-in banner */
 #signin-banner{display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#0a1628;border:1px solid var(--royal);border-radius:12px;padding:14px 16px;z-index:40;align-items:center;justify-content:space-between;gap:12px;}
@@ -504,12 +512,33 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 
 <!-- ══ ADMIN PANEL ══ -->
 <div id="admin-panel">
-  <div style="padding:20px;display:flex;flex-direction:column;height:100%;">
+  <div style="padding:20px;display:flex;flex-direction:column;height:100%;overflow:hidden;">
     <div class="panel-header">
-      <span class="panel-title">ADMIN</span>
+      <span class="panel-title">⚡ ADMIN</span>
       <button class="panel-close" onclick="closeAdmin()">✕</button>
     </div>
-    <div id="admin-list" style="flex:1;overflow-y:auto;"></div>
+    <!-- tabs -->
+    <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid #0f1e30;margin-bottom:16px;flex-shrink:0;">
+      <button class="admin-tab active" id="atab-videos" onclick="adminTab('videos')">VIDEOS</button>
+      <button class="admin-tab" id="atab-users" onclick="adminTab('users')">USERS</button>
+      <button class="admin-tab" id="atab-banned" onclick="adminTab('banned')">BANNED</button>
+    </div>
+    <!-- stats bar -->
+    <div id="admin-stats" style="display:flex;gap:12px;margin-bottom:14px;flex-shrink:0;">
+      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:'Bebas Neue';font-size:22px;color:#4da6ff;" id="stat-videos">—</div>
+        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">VIDEOS</div>
+      </div>
+      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:'Bebas Neue';font-size:22px;color:#4da6ff;" id="stat-users">—</div>
+        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">USERS</div>
+      </div>
+      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:'Bebas Neue';font-size:22px;color:#cc2222;" id="stat-banned">—</div>
+        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">BANNED</div>
+      </div>
+    </div>
+    <div id="admin-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
 
@@ -1036,31 +1065,176 @@ function closeInbox() { const p=document.getElementById('inbox-panel'); if(p) p.
 // ═══════════════════════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════════════════════
+let _adminTab = 'videos';
+
 function openAdmin() {
   if (!_user || _user.email !== ADMIN) { toast('Access denied'); return; }
   const p=document.getElementById('admin-panel'); if(p) p.style.display='flex';
-  adminLoad();
+  adminTab('videos');
+  adminLoadStats();
 }
 function closeAdmin() { const p=document.getElementById('admin-panel'); if(p) p.style.display='none'; }
-async function adminLoad() {
-  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
-  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+
+function adminTab(tab) {
+  _adminTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('atab-'+tab)?.classList.add('active');
+  if (tab==='videos') adminLoadVideos();
+  else if (tab==='users') adminLoadUsers();
+  else if (tab==='banned') adminLoadBanned();
+}
+
+async function adminLoadStats() {
+  const sb=getSB();
   try {
-    const { data:vids } = await sb.from('videos').select('*,profiles(username)').order('created_at',{ ascending:false });
+    const [vRes, uRes, bRes] = await Promise.all([
+      sb.from('videos').select('*',{count:'exact',head:true}),
+      sb.from('profiles').select('*',{count:'exact',head:true}),
+      sb.from('banned_users').select('*',{count:'exact',head:true})
+    ]);
+    document.getElementById('stat-videos').textContent = vRes.count||0;
+    document.getElementById('stat-users').textContent = uRes.count||0;
+    document.getElementById('stat-banned').textContent = bRes.count||0;
+  } catch(e) {}
+}
+
+async function adminLoadVideos() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
+  try {
+    const { data:vids } = await sb.from('videos').select('*,profiles(username,id)').order('created_at',{ascending:false});
     if (!vids?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No videos</div>'; return; }
     list.innerHTML='';
     vids.forEach(v => {
-      const row=document.createElement('div'); row.className='admin-row';
       const uname=v.profiles?.username||'unknown';
-      row.innerHTML=`<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;"><video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||''}</div></div><button onclick="adminDel('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">DEL</button>`;
-      list.appendChild(row);
+      const uid=v.profiles?.id||v.user_id;
+      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-v-'+v.id;
+      card.innerHTML=`
+        <div style="width:48px;height:64px;background:#0d1a2a;border-radius:6px;overflow:hidden;flex-shrink:0;">
+          <video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:#4da6ff;margin-bottom:2px;">@${uname}</div>
+          <div style="font-size:12px;color:#e8dcc8;line-height:1.3;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${v.caption||'(no caption)'}</div>
+          <div style="font-size:10px;color:#3a5a7c;">${new Date(v.created_at).toLocaleDateString()}</div>
+        </div>
+        <div class="admin-actions">
+          <button class="abtn abtn-del" onclick="adminDelVideo('${v.id}','${v.url}','acard-v-${v.id}')">🗑 DELETE</button>
+          <button class="abtn abtn-ban" onclick="adminBanUser('${uid}','${uname}','acard-v-${v.id}')">🚫 BAN USER</button>
+        </div>`;
+      list.appendChild(card);
     });
-  } catch(e) {}
+  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
 }
-async function adminDel(id,url,row) {
-  if (!confirm('Delete permanently?')) return;
+
+async function adminLoadUsers() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
+  try {
+    const { data:users } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+    if (!users?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No users</div>'; return; }
+    list.innerHTML='';
+    users.forEach(u => {
+      if (u.id === _user?.id) return; // skip self
+      const init=(u.username||'U').substring(0,2).toUpperCase();
+      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-u-'+u.id;
+      card.innerHTML=`
+        <div style="width:44px;height:44px;border-radius:50%;background:#1a3a8f;border:2px solid #0f2255;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:16px;font-weight:700;color:#fff;flex-shrink:0;">${init}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;color:#e8dcc8;font-family:'Barlow Condensed';letter-spacing:1px;">@${u.username||'unknown'}</div>
+          <div style="font-size:10px;color:#3a5a7c;margin-top:2px;">Joined ${new Date(u.created_at||Date.now()).toLocaleDateString()}</div>
+        </div>
+        <div class="admin-actions">
+          <button class="abtn abtn-ban" onclick="adminBanUser('${u.id}','${u.username}','acard-u-${u.id}')">🚫 BAN</button>
+          <button class="abtn abtn-del" onclick="adminDeleteAccount('${u.id}','${u.username}','acard-u-${u.id}')">💀 DELETE</button>
+        </div>`;
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
+}
+
+async function adminLoadBanned() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
+  try {
+    const { data:banned } = await sb.from('banned_users').select('*').order('created_at',{ascending:false});
+    if (!banned?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No banned users</div>'; return; }
+    list.innerHTML='';
+    banned.forEach(b => {
+      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-b-'+b.user_id;
+      card.innerHTML=`
+        <div style="width:44px;height:44px;border-radius:50%;background:#3a0a0a;border:2px solid #8b0000;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🚫</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;color:#ff6666;font-family:'Barlow Condensed';letter-spacing:1px;">@${b.username||'unknown'}</div>
+          <div style="font-size:11px;color:#3a5a7c;margin-top:2px;">Reason: ${b.reason||'No reason given'}</div>
+          <div style="font-size:10px;color:#3a5a7c;margin-top:2px;">Banned ${new Date(b.created_at).toLocaleDateString()}</div>
+        </div>
+        <div class="admin-actions">
+          <button class="abtn abtn-unban" onclick="adminUnban('${b.user_id}','${b.username}','acard-b-${b.user_id}')">✅ UNBAN</button>
+        </div>`;
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
+}
+
+async function adminDelVideo(id, url, cardId) {
+  if (!confirm('Delete this video permanently?')) return;
   const sb=getSB();
-  try { await sb.from('videos').delete().eq('id',id); try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {} row?.remove(); toast('Deleted'); loadFeed(); } catch(e) {}
+  try {
+    await sb.from('videos').delete().eq('id',id);
+    try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
+    document.getElementById(cardId)?.remove();
+    toast('Video deleted'); loadFeed(); adminLoadStats();
+  } catch(e) { toast('Delete failed'); }
+}
+
+async function adminBanUser(uid, uname, cardId) {
+  const reason = prompt(`Reason for banning @${uname}? (optional)`);
+  if (reason === null) return; // cancelled
+  const sb=getSB();
+  try {
+    await sb.from('banned_users').upsert({ user_id:uid, username:uname, reason:reason||'Violation of community guidelines' });
+    // Delete all their videos
+    const { data:vids } = await sb.from('videos').select('id,url').eq('user_id',uid);
+    if (vids?.length) {
+      await sb.from('videos').delete().eq('user_id',uid);
+      for (const v of vids) {
+        try { const p=v.url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
+      }
+    }
+    document.getElementById(cardId)?.remove();
+    toast(`@${uname} banned`); loadFeed(); adminLoadStats();
+  } catch(e) { toast('Ban failed — make sure banned_users table exists'); }
+}
+
+async function adminUnban(uid, uname, cardId) {
+  if (!confirm(`Unban @${uname}?`)) return;
+  const sb=getSB();
+  try {
+    await sb.from('banned_users').delete().eq('user_id',uid);
+    document.getElementById(cardId)?.remove();
+    toast(`@${uname} unbanned`); adminLoadStats();
+  } catch(e) { toast('Unban failed'); }
+}
+
+async function adminDeleteAccount(uid, uname, cardId) {
+  if (!confirm(`PERMANENTLY DELETE @${uname}'s account and all their content? This cannot be undone.`)) return;
+  const sb=getSB();
+  try {
+    // Delete videos + storage
+    const { data:vids } = await sb.from('videos').select('id,url').eq('user_id',uid);
+    if (vids?.length) {
+      await sb.from('videos').delete().eq('user_id',uid);
+      for (const v of vids) {
+        try { const p=v.url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
+      }
+    }
+    await sb.from('likes').delete().eq('user_id',uid);
+    await sb.from('comments').delete().eq('user_id',uid);
+    await sb.from('profiles').delete().eq('id',uid);
+    document.getElementById(cardId)?.remove();
+    toast(`@${uname} account deleted`); loadFeed(); adminLoadStats();
+  } catch(e) { toast('Delete account failed'); }
 }
 
 // ═══════════════════════════════════════════════════════
