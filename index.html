@@ -1044,10 +1044,29 @@ async function deleteVideo(id, url, el) {
   if (!confirm('Delete this reel permanently?')) return;
   const sb = getSB();
   try {
-    await sb.from('videos').delete().eq('id',id).eq('user_id',_user.id);
-    try { const p=url.split('/videos/')[1]; if (p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
-    el?.remove(); toast('Reel deleted'); loadFeed();
-  } catch(e) {}
+    // Delete from DB first
+    const { error: dbErr } = await sb.from('videos').delete().eq('id',id).eq('user_id',_user.id);
+    if (dbErr) { console.error('DB delete error:', dbErr); toast('Delete failed: ' + dbErr.message); return; }
+
+    // Delete from storage
+    try {
+      const urlObj = new URL(url);
+      const parts = urlObj.pathname.split('/videos/');
+      if (parts.length > 1) {
+        const storagePath = decodeURIComponent(parts[1]);
+        const { error: stErr } = await sb.storage.from('videos').remove([storagePath]);
+        if (stErr) console.warn('Storage delete warn:', stErr.message);
+      }
+    } catch(e) { console.warn('Storage path parse failed:', e); }
+
+    // Remove the card from DOM immediately
+    const card = el?.closest('.profile-thumb') || el?.closest('.reel-card') || el?.parentElement || el;
+    card?.remove();
+    toast('Reel deleted');
+    // Update reel count in profile stats
+    const sn = document.getElementById('pstat-reels');
+    if (sn) sn.textContent = Math.max(0, (parseInt(sn.textContent)||1) - 1);
+  } catch(e) { console.error('deleteVideo error:', e); toast('Delete failed'); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1281,17 +1300,48 @@ function navTo(el, section) {
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   paintStars(document.getElementById('splash-canvas'));
 
-  // Clear any saved session — always start fresh
-  try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch(e) {}
+  // Check for existing session — skip login if already authenticated
+  const sb = getSB();
+  let restored = false;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.user) {
+      _user = session.user;
+      // Try to load username from profiles
+      try {
+        const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
+        if (prof?.username) _username = prof.username;
+      } catch(e) {}
+      restored = true;
+    }
+  } catch(e) {}
 
-  // Show splash 1.5s then onboard
+  // Listen for auth changes (login/logout from any tab)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      _user = session.user;
+      try {
+        const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
+        if (prof?.username) _username = prof.username;
+      } catch(e) {}
+    } else if (event === 'SIGNED_OUT') {
+      _user = null; _username = 'WARRIOR';
+    }
+  });
+
+  // Show splash 1.5s, then go to feed if restored or onboard if not
   setTimeout(() => {
-    showScreen('onboard');
-    paintStars(document.getElementById('onboard-canvas'));
-    updateOb(0);
+    if (restored) {
+      showScreen('feed');
+      loadFeed();
+    } else {
+      showScreen('onboard');
+      paintStars(document.getElementById('onboard-canvas'));
+      updateOb(0);
+    }
   }, 1500);
 });
 
