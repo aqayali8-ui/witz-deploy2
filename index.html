@@ -4,7 +4,80 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WITZ</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
+// ═══════════════════════════════════════════════════════
+// CAMERA RECORDING
+// ═══════════════════════════════════════════════════════
+let _mediaStream = null, _recorder = null, _recChunks = [], _recTimer = null, _recSecs = 0;
+
+async function openCamera() {
+  const modal = document.getElementById('cam-modal');
+  if (!modal) return;
+  try {
+    _mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio: true });
+    const prev = document.getElementById('cam-preview');
+    if (prev) { prev.srcObject = _mediaStream; prev.play(); }
+    modal.style.display = 'flex';
+    _recChunks = [];
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
+    const timer = document.getElementById('cam-timer');
+    if (timer) timer.textContent = '0:00';
+  } catch(e) {
+    toast('Camera access denied');
+  }
+}
+
+function closeCamera() {
+  stopStream();
+  const modal = document.getElementById('cam-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function stopStream() {
+  if (_mediaStream) { _mediaStream.getTracks().forEach(t => t.stop()); _mediaStream = null; }
+  if (_recTimer) { clearInterval(_recTimer); _recTimer = null; }
+  if (_recorder && _recorder.state !== 'inactive') { _recorder.stop(); }
+}
+
+function toggleRecord() {
+  if (_recorder && _recorder.state === 'recording') {
+    // STOP
+    _recorder.stop();
+    clearInterval(_recTimer);
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
+  } else {
+    // START
+    _recChunks = []; _recSecs = 0;
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+    _recorder = new MediaRecorder(_mediaStream, { mimeType });
+    _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
+    _recorder.onstop = () => {
+      const blob = new Blob(_recChunks, { type: 'video/webm' });
+      const file = new File([blob], 'witz_reel_' + Date.now() + '.webm', { type: 'video/webm' });
+      // inject into file input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      const fp = document.getElementById('file-pick');
+      if (fp) { fp.files = dt.files; fileSelected(fp); }
+      closeCamera();
+      toast('Video recorded ✓ — add caption and post!');
+    };
+    _recorder.start();
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'STOP'; btn.style.background = '#8b0000'; }
+    _recTimer = setInterval(() => {
+      _recSecs++;
+      const m = Math.floor(_recSecs/60), s = _recSecs%60;
+      const t = document.getElementById('cam-timer');
+      if (t) t.textContent = m + ':' + (s<10?'0':'')+s;
+      if (_recSecs >= 180) toggleRecord(); // max 3 min
+    }, 1000);
+  }
+}
+
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -365,11 +438,27 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <span class="panel-title">POST A REEL</span>
     <button class="panel-close" onclick="closeUpload()">✕</button>
   </div>
-  <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
-    <div class="upload-zone-icon">🎬</div>
-    <div class="upload-zone-txt">TAP TO SELECT VIDEO</div>
-    <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 200MB</div>
-    <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
+  <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <div class="upload-zone" style="flex:1;margin-bottom:0;" onclick="document.getElementById('file-pick').click()">
+      <div class="upload-zone-icon">📁</div>
+      <div class="upload-zone-txt" style="font-size:14px;">GALLERY</div>
+      <div class="upload-zone-sub" id="upload-file-name">Select video</div>
+    </div>
+    <div class="upload-zone" style="flex:1;margin-bottom:0;" onclick="openCamera()">
+      <div class="upload-zone-icon">🎥</div>
+      <div class="upload-zone-txt" style="font-size:14px;">RECORD</div>
+      <div class="upload-zone-sub">Use camera</div>
+    </div>
+  </div>
+  <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
+  <!-- camera modal -->
+  <div id="cam-modal" style="display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column;align-items:center;justify-content:center;">
+    <video id="cam-preview" autoplay playsinline muted style="width:100%;max-height:70vh;object-fit:cover;"></video>
+    <div style="display:flex;gap:20px;margin-top:20px;align-items:center;">
+      <button onclick="closeCamera()" style="background:#1a3a8f;border:none;color:#fff;padding:12px 24px;border-radius:10px;font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;">CANCEL</button>
+      <button id="cam-btn" onclick="toggleRecord()" style="width:70px;height:70px;border-radius:50%;background:#cc2222;border:4px solid #fff;cursor:pointer;font-size:11px;font-family:'Barlow Condensed';letter-spacing:1px;color:#fff;">REC</button>
+      <div id="cam-timer" style="font-family:'Bebas Neue';font-size:22px;color:#fff;letter-spacing:3px;width:60px;">0:00</div>
+    </div>
   </div>
   <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..."></textarea>
   <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
@@ -1017,6 +1106,79 @@ document.addEventListener('DOMContentLoaded', () => {
   // Enter key on auth
   document.getElementById('input-password')?.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
 });
+
+// ═══════════════════════════════════════════════════════
+// CAMERA RECORDING
+// ═══════════════════════════════════════════════════════
+let _mediaStream = null, _recorder = null, _recChunks = [], _recTimer = null, _recSecs = 0;
+
+async function openCamera() {
+  const modal = document.getElementById('cam-modal');
+  if (!modal) return;
+  try {
+    _mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio: true });
+    const prev = document.getElementById('cam-preview');
+    if (prev) { prev.srcObject = _mediaStream; prev.play(); }
+    modal.style.display = 'flex';
+    _recChunks = [];
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
+    const timer = document.getElementById('cam-timer');
+    if (timer) timer.textContent = '0:00';
+  } catch(e) {
+    toast('Camera access denied');
+  }
+}
+
+function closeCamera() {
+  stopStream();
+  const modal = document.getElementById('cam-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function stopStream() {
+  if (_mediaStream) { _mediaStream.getTracks().forEach(t => t.stop()); _mediaStream = null; }
+  if (_recTimer) { clearInterval(_recTimer); _recTimer = null; }
+  if (_recorder && _recorder.state !== 'inactive') { _recorder.stop(); }
+}
+
+function toggleRecord() {
+  if (_recorder && _recorder.state === 'recording') {
+    // STOP
+    _recorder.stop();
+    clearInterval(_recTimer);
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
+  } else {
+    // START
+    _recChunks = []; _recSecs = 0;
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+    _recorder = new MediaRecorder(_mediaStream, { mimeType });
+    _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
+    _recorder.onstop = () => {
+      const blob = new Blob(_recChunks, { type: 'video/webm' });
+      const file = new File([blob], 'witz_reel_' + Date.now() + '.webm', { type: 'video/webm' });
+      // inject into file input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      const fp = document.getElementById('file-pick');
+      if (fp) { fp.files = dt.files; fileSelected(fp); }
+      closeCamera();
+      toast('Video recorded ✓ — add caption and post!');
+    };
+    _recorder.start();
+    const btn = document.getElementById('cam-btn');
+    if (btn) { btn.textContent = 'STOP'; btn.style.background = '#8b0000'; }
+    _recTimer = setInterval(() => {
+      _recSecs++;
+      const m = Math.floor(_recSecs/60), s = _recSecs%60;
+      const t = document.getElementById('cam-timer');
+      if (t) t.textContent = m + ':' + (s<10?'0':'')+s;
+      if (_recSecs >= 180) toggleRecord(); // max 3 min
+    }, 1000);
+  }
+}
+
 </script>
 </body>
 </html>
