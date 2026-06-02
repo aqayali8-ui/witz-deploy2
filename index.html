@@ -1300,24 +1300,10 @@ function navTo(el, section) {
 // ═══════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════
-window.addEventListener('load', async () => {
+window.addEventListener('load', () => {
   paintStars(document.getElementById('splash-canvas'));
 
-  // Check for existing session — skip login if already authenticated
   const sb = getSB();
-  let restored = false;
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session && session.user) {
-      _user = session.user;
-      // Try to load username from profiles
-      try {
-        const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
-        if (prof?.username) _username = prof.username;
-      } catch(e) {}
-      restored = true;
-    }
-  } catch(e) {}
 
   // Listen for auth changes (login/logout from any tab)
   sb.auth.onAuthStateChange(async (event, session) => {
@@ -1332,8 +1318,21 @@ window.addEventListener('load', async () => {
     }
   });
 
-  // Show splash 1.5s, then go to feed if restored or onboard if not
-  setTimeout(() => {
+  // Always show splash first (1.5s), then check session in background
+  setTimeout(async () => {
+    let restored = false;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.user) {
+        _user = session.user;
+        try {
+          const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
+          if (prof?.username) _username = prof.username;
+        } catch(e) {}
+        restored = true;
+      }
+    } catch(e) {}
+
     if (restored) {
       showScreen('feed');
       loadFeed();
