@@ -1334,8 +1334,7 @@ window.addEventListener('load', () => {
     } catch(e) {}
 
     if (restored) {
-      showScreen('app');
-      loadFeed();
+      enterApp();
     } else {
       showScreen('onboard');
       paintStars(document.getElementById('onboard-canvas'));
