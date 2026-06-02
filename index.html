@@ -5,6 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WITZ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
+
+// ═══════════════════════════════════════════════════════
+// MUTE TOGGLE
+// ═══════════════════════════════════════════════════════
+let _globalMuted = true;
+
+function toggleMute(btn) {
+  _globalMuted = !_globalMuted;
+  // Update all visible videos
+  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
+  // Update all mute buttons
+  document.querySelectorAll('#reel-wrap button').forEach(b => {
+    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
+  });
+}
+
+function toggleMuteByVideo(vid) {
+  _globalMuted = !_globalMuted;
+  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
+  document.querySelectorAll('#reel-wrap button').forEach(b => {
+    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 // CAMERA RECORDING
 // ═══════════════════════════════════════════════════════
@@ -757,7 +781,7 @@ function buildReel(v) {
   const init = (v.profiles?.username || 'W').substring(0,2).toUpperCase();
 
   div.innerHTML = `
-    <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+    <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onclick="toggleMuteByVideo(this)"></video>
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
     <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -766,6 +790,7 @@ function buildReel(v) {
       </div>
       <div class="reel-cap">${v.caption || ''}</div>
     </div>
+    <button onclick="toggleMute(this)" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:50%;width:38px;height:38px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔇</button>
     <div style="position:absolute;bottom:72px;right:8px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:5;">
       <div class="act-col" onclick="doLike('${v.id}',this)" style="cursor:pointer;">
         <div class="tribal-btn" id="rl-like-${v.id}">
@@ -1106,6 +1131,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Enter key on auth
   document.getElementById('input-password')?.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
 });
+
+
+// ═══════════════════════════════════════════════════════
+// MUTE TOGGLE
+// ═══════════════════════════════════════════════════════
+let _globalMuted = true;
+
+function toggleMute(btn) {
+  _globalMuted = !_globalMuted;
+  // Update all visible videos
+  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
+  // Update all mute buttons
+  document.querySelectorAll('#reel-wrap button').forEach(b => {
+    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
+  });
+}
+
+function toggleMuteByVideo(vid) {
+  _globalMuted = !_globalMuted;
+  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
+  document.querySelectorAll('#reel-wrap button').forEach(b => {
+    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
+  });
+}
 
 // ═══════════════════════════════════════════════════════
 // CAMERA RECORDING
