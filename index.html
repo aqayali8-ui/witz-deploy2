@@ -1305,42 +1305,43 @@ window.addEventListener('load', () => {
 
   const sb = getSB();
 
-  // Listen for auth changes (login/logout from any tab)
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      _user = session.user;
-      try {
-        const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
-        if (prof?.username) _username = prof.username;
-      } catch(e) {}
-    } else if (event === 'SIGNED_OUT') {
-      _user = null; _username = 'WARRIOR';
-    }
-  });
-
-  // Always show splash first (1.5s), then check session in background
-  setTimeout(async () => {
-    let restored = false;
+  // Read session from localStorage directly — no network call, no hang
+  function getStoredSession() {
     try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session && session.user) {
-        _user = session.user;
-        try {
-          const { data: prof } = await sb.from('profiles').select('username').eq('id', _user.id).single();
-          if (prof?.username) _username = prof.username;
-        } catch(e) {}
-        restored = true;
-      }
-    } catch(e) {}
+      const raw = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const user = parsed?.user || parsed?.currentSession?.user;
+      const expiresAt = parsed?.expires_at || parsed?.currentSession?.expires_at;
+      if (!user) return null;
+      // Check not expired (expires_at is unix timestamp in seconds)
+      if (expiresAt && Date.now() / 1000 > expiresAt) return null;
+      return user;
+    } catch(e) { return null; }
+  }
 
-    if (restored) {
-      enterApp();
+  // After splash, route based on stored session
+  setTimeout(async () => {
+    const storedUser = getStoredSession();
+    if (storedUser) {
+      _user = storedUser;
+      // Load profile username in background — don't block
+      loadProfile().then(() => {
+        enterApp();
+      }).catch(() => enterApp());
     } else {
       showScreen('onboard');
       paintStars(document.getElementById('onboard-canvas'));
       updateOb(0);
     }
   }, 1500);
+
+  // onAuthStateChange handles token refresh and logout in background
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT') {
+      _user = null; _username = 'WARRIOR';
+    }
+  });
 });
 
 document.addEventListener('DOMContentLoaded', () => {
