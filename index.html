@@ -4,104 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WITZ</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
-
-// ═══════════════════════════════════════════════════════
-// MUTE TOGGLE
-// ═══════════════════════════════════════════════════════
-let _globalMuted = true;
-
-function toggleMute(btn) {
-  _globalMuted = !_globalMuted;
-  // Update all visible videos
-  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
-  // Update all mute buttons
-  document.querySelectorAll('#reel-wrap button').forEach(b => {
-    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
-  });
-}
-
-function toggleMuteByVideo(vid) {
-  _globalMuted = !_globalMuted;
-  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
-  document.querySelectorAll('#reel-wrap button').forEach(b => {
-    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
-  });
-}
-
-// ═══════════════════════════════════════════════════════
-// CAMERA RECORDING
-// ═══════════════════════════════════════════════════════
-let _mediaStream = null, _recorder = null, _recChunks = [], _recTimer = null, _recSecs = 0;
-
-async function openCamera() {
-  const modal = document.getElementById('cam-modal');
-  if (!modal) return;
-  try {
-    _mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio: true });
-    const prev = document.getElementById('cam-preview');
-    if (prev) { prev.srcObject = _mediaStream; prev.play(); }
-    modal.style.display = 'flex';
-    _recChunks = [];
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
-    const timer = document.getElementById('cam-timer');
-    if (timer) timer.textContent = '0:00';
-  } catch(e) {
-    toast('Camera access denied');
-  }
-}
-
-function closeCamera() {
-  stopStream();
-  const modal = document.getElementById('cam-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function stopStream() {
-  if (_mediaStream) { _mediaStream.getTracks().forEach(t => t.stop()); _mediaStream = null; }
-  if (_recTimer) { clearInterval(_recTimer); _recTimer = null; }
-  if (_recorder && _recorder.state !== 'inactive') { _recorder.stop(); }
-}
-
-function toggleRecord() {
-  if (_recorder && _recorder.state === 'recording') {
-    // STOP
-    _recorder.stop();
-    clearInterval(_recTimer);
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
-  } else {
-    // START
-    _recChunks = []; _recSecs = 0;
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    _recorder = new MediaRecorder(_mediaStream, { mimeType });
-    _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
-    _recorder.onstop = () => {
-      const blob = new Blob(_recChunks, { type: 'video/webm' });
-      const file = new File([blob], 'witz_reel_' + Date.now() + '.webm', { type: 'video/webm' });
-      // inject into file input
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      const fp = document.getElementById('file-pick');
-      if (fp) { fp.files = dt.files; fileSelected(fp); }
-      closeCamera();
-      toast('Video recorded ✓ — add caption and post!');
-    };
-    _recorder.start();
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'STOP'; btn.style.background = '#8b0000'; }
-    _recTimer = setInterval(() => {
-      _recSecs++;
-      const m = Math.floor(_recSecs/60), s = _recSecs%60;
-      const t = document.getElementById('cam-timer');
-      if (t) t.textContent = m + ':' + (s<10?'0':'')+s;
-      if (_recSecs >= 180) toggleRecord(); // max 3 min
-    }, 1000);
-  }
-}
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -165,15 +68,15 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 
 /* ── APP ── */
 #app{background:var(--night);}
-.content-layer{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.content-layer{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;}
 .topnav{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;flex-shrink:0;}
 .topnav-tabs{display:flex;gap:20px;}
 .topnav-tab{background:none;border:none;color:var(--muted);font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;padding:4px 0;border-bottom:2px solid transparent;transition:.2s;}
 .topnav-tab.active{color:var(--white);border-bottom-color:var(--sky);}
 #nav-search-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;}
-#reel-wrap{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+#reel-wrap{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;}
 #reel-wrap::-webkit-scrollbar{display:none;}
-.real-reel{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;flex-shrink:0;}
+.real-reel{position:relative;height:100vh;scroll-snap-align:start;overflow:hidden;background:#000;}
 .reel-av{width:38px;height:38px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:13px;font-weight:700;color:var(--white);flex-shrink:0;}
 .reel-uname{font-family:'Barlow Condensed';font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;}
 .reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
@@ -204,7 +107,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .c-input{flex:1;background:#080f28;border:1px solid #0f1e30;border-radius:20px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;}
 .c-send{background:var(--royal);border:none;border-radius:50%;width:36px;height:36px;color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 /* ── PANELS ── */
-#search-panel,#profile-panel,#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;} #profile-panel{position:fixed;}
+#search-panel,#profile-panel,#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;}
 #search-panel.open,#profile-panel.open,#upload-panel.open{display:flex;}
 #inbox-panel,#admin-panel,#forgot-panel{position:fixed;inset:0;background:#050D1A;z-index:60;flex-direction:column;display:none;}
 .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
@@ -234,14 +137,6 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .btn-upload{width:100%;padding:15px;background:var(--royal);border:none;border-radius:10px;color:var(--white);font-family:'Bebas Neue';font-size:20px;letter-spacing:3px;cursor:pointer;transition:.2s;}
 .btn-upload:disabled{opacity:0.6;cursor:not-allowed;}
 /* admin */
-.admin-tab{flex:1;padding:10px;background:transparent;border:none;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;cursor:pointer;transition:.2s;}
-.admin-tab.active{background:#1a3a8f;color:#fff;}
-.admin-card{background:#0a1230;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;border:1px solid #0f1e30;}
-.admin-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
-.abtn{border:none;border-radius:6px;padding:6px 10px;font-family:'Barlow Condensed';font-size:11px;letter-spacing:1px;cursor:pointer;white-space:nowrap;}
-.abtn-del{background:rgba(139,0,0,0.3);color:#ff6666;border:1px solid #8b000055;}
-.abtn-ban{background:rgba(180,100,0,0.3);color:#ffaa44;border:1px solid #b4640055;}
-.abtn-unban{background:rgba(0,100,50,0.3);color:#44ff99;border:1px solid #00643255;}
 .admin-row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #0f1e30;}
 /* sign-in banner */
 #signin-banner{display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#0a1628;border:1px solid var(--royal);border-radius:12px;padding:14px 16px;z-index:40;align-items:center;justify-content:space-between;gap:12px;}
@@ -419,7 +314,6 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     </div>
   </div>
   <!-- comment sheet -->
-  <div id="c-overlay" onclick="closeComments()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:29;"></div>
   <div id="c-sheet">
     <div class="c-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -437,7 +331,6 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <span class="signin-banner-msg" id="signin-banner-msg">Sign in to interact</span>
     <button class="signin-banner-btn" onclick="goSignUp()">JOIN WITZ</button>
   </div>
-
   <!-- admin btn hidden unless owner -->
   <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:50px;right:12px;background:#8b0000;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
 </div>
@@ -454,16 +347,6 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 
 <!-- ══ PROFILE PANEL ══ -->
 <div id="profile-panel">
-  <!-- Confirm modal inside profile panel so it renders above it -->
-  <div id="confirm-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:#050e25;border:1px solid #1a3a6a;border-radius:16px;padding:28px 24px;max-width:300px;width:90%;text-align:center;">
-      <div id="confirm-msg" style="color:#e0eaff;font-family:Barlow Condensed,sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:24px;">Are you sure?</div>
-      <div style="display:flex;gap:12px;justify-content:center;">
-        <button id="confirm-cancel" style="flex:1;background:transparent;border:1px solid #1a3a6a;border-radius:10px;padding:12px;color:#4a8ab5;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">CANCEL</button>
-        <button id="confirm-ok" style="flex:1;background:#8b0000;border:none;border-radius:10px;padding:12px;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">DELETE</button>
-      </div>
-    </div>
-  </div>
   <div class="panel-header">
     <span class="panel-title">PROFILE</span>
     <button class="panel-close" onclick="closeProfile()">✕</button>
@@ -485,27 +368,11 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <span class="panel-title">POST A REEL</span>
     <button class="panel-close" onclick="closeUpload()">✕</button>
   </div>
-  <div style="display:flex;gap:10px;margin-bottom:14px;">
-    <div class="upload-zone" style="flex:1;margin-bottom:0;" onclick="document.getElementById('file-pick').click()">
-      <div class="upload-zone-icon">📁</div>
-      <div class="upload-zone-txt" style="font-size:14px;">GALLERY</div>
-      <div class="upload-zone-sub" id="upload-file-name">Select video</div>
-    </div>
-    <div class="upload-zone" style="flex:1;margin-bottom:0;" onclick="openCamera()">
-      <div class="upload-zone-icon">🎥</div>
-      <div class="upload-zone-txt" style="font-size:14px;">RECORD</div>
-      <div class="upload-zone-sub">Use camera</div>
-    </div>
-  </div>
-  <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
-  <!-- camera modal -->
-  <div id="cam-modal" style="display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column;align-items:center;justify-content:center;">
-    <video id="cam-preview" autoplay playsinline muted style="width:100%;max-height:70vh;object-fit:cover;"></video>
-    <div style="display:flex;gap:20px;margin-top:20px;align-items:center;">
-      <button onclick="closeCamera()" style="background:#1a3a8f;border:none;color:#fff;padding:12px 24px;border-radius:10px;font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;">CANCEL</button>
-      <button id="cam-btn" onclick="toggleRecord()" style="width:70px;height:70px;border-radius:50%;background:#cc2222;border:4px solid #fff;cursor:pointer;font-size:11px;font-family:'Barlow Condensed';letter-spacing:1px;color:#fff;">REC</button>
-      <div id="cam-timer" style="font-family:'Bebas Neue';font-size:22px;color:#fff;letter-spacing:3px;width:60px;">0:00</div>
-    </div>
+  <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
+    <div class="upload-zone-icon">🎬</div>
+    <div class="upload-zone-txt">TAP TO SELECT VIDEO</div>
+    <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 200MB</div>
+    <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
   </div>
   <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..."></textarea>
   <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
@@ -527,33 +394,12 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 
 <!-- ══ ADMIN PANEL ══ -->
 <div id="admin-panel">
-  <div style="padding:20px;display:flex;flex-direction:column;height:100%;overflow:hidden;">
+  <div style="padding:20px;display:flex;flex-direction:column;height:100%;">
     <div class="panel-header">
-      <span class="panel-title">⚡ ADMIN</span>
+      <span class="panel-title">ADMIN</span>
       <button class="panel-close" onclick="closeAdmin()">✕</button>
     </div>
-    <!-- tabs -->
-    <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid #0f1e30;margin-bottom:16px;flex-shrink:0;">
-      <button class="admin-tab active" id="atab-videos" onclick="adminTab('videos')">VIDEOS</button>
-      <button class="admin-tab" id="atab-users" onclick="adminTab('users')">USERS</button>
-      <button class="admin-tab" id="atab-banned" onclick="adminTab('banned')">BANNED</button>
-    </div>
-    <!-- stats bar -->
-    <div id="admin-stats" style="display:flex;gap:12px;margin-bottom:14px;flex-shrink:0;">
-      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:'Bebas Neue';font-size:22px;color:#4da6ff;" id="stat-videos">—</div>
-        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">VIDEOS</div>
-      </div>
-      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:'Bebas Neue';font-size:22px;color:#4da6ff;" id="stat-users">—</div>
-        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">USERS</div>
-      </div>
-      <div style="flex:1;background:#0a1230;border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:'Bebas Neue';font-size:22px;color:#cc2222;" id="stat-banned">—</div>
-        <div style="font-size:9px;letter-spacing:2px;color:#3a5a7c;">BANNED</div>
-      </div>
-    </div>
-    <div id="admin-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="admin-list" style="flex:1;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -590,20 +436,7 @@ let _authMode = 'login', _obSlide = 0, _toastTimer = null;
 // ═══════════════════════════════════════════════════════
 function getSB() {
   if (!_sb) {
-    try {
-      // Pass stored session to client so it's authenticated from the start
-      const stored = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
-      const parsed = stored ? JSON.parse(stored) : null;
-      const accessToken = parsed?.access_token;
-      const refreshToken = parsed?.refresh_token;
-      _sb = supabase.createClient(SURL, SKEY, {
-        auth: { persistSession: true, autoRefreshToken: true }
-      });
-      // Manually set the session so Supabase knows the user is logged in
-      if (accessToken && refreshToken) {
-        _sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).catch(() => {});
-      }
-    } catch(e) { _sb = null; }
+    try { _sb = supabase.createClient(SURL, SKEY); } catch(e) { _sb = null; }
   }
   return _sb;
 }
@@ -838,7 +671,7 @@ function buildReel(v) {
   const init = (v.profiles?.username || 'W').substring(0,2).toUpperCase();
 
   div.innerHTML = `
-    <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onclick="toggleMuteByVideo(this)"></video>
+    <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
     <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -847,7 +680,6 @@ function buildReel(v) {
       </div>
       <div class="reel-cap">${v.caption || ''}</div>
     </div>
-    <button onclick="toggleMute(this)" style="position:absolute;top:14px;right:14px;z-index:10;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:50%;width:38px;height:38px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔇</button>
     <div style="position:absolute;bottom:72px;right:8px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:5;">
       <div class="act-col" onclick="doLike('${v.id}',this)" style="cursor:pointer;">
         <div class="tribal-btn" id="rl-like-${v.id}">
@@ -896,15 +728,10 @@ function buildReel(v) {
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
-      if (e.isIntersecting) {
-        vid.muted = _globalMuted;
-        vid.play().catch(() => { vid.muted = true; vid.play().catch(()=>{}); });
-        _currentVideoId = e.target.dataset.id;
-      } else {
-        vid.pause();
-      }
+      if (e.isIntersecting) { vid.muted=true; vid.play().catch(()=>{}); _currentVideoId = e.target.dataset.id; }
+      else vid.pause();
     });
-  }, { threshold: 0.5 });
+  }, { threshold: 0.6 });
   obs.observe(div);
   return div;
 }
@@ -961,14 +788,10 @@ function switchFeed(el) {
 function openComments(videoId) {
   if (videoId) _currentVideoId = videoId;
   document.getElementById('c-sheet')?.classList.add('open');
-  const ov = document.getElementById('c-overlay');
-  if (ov) ov.style.display = 'block';
   if (_currentVideoId) loadComments(_currentVideoId);
 }
 function closeComments() {
   document.getElementById('c-sheet')?.classList.remove('open');
-  const ov = document.getElementById('c-overlay');
-  if (ov) ov.style.display = 'none';
   const cl = document.getElementById('c-list');
   if (cl) cl.innerHTML = '';
   const ci = document.getElementById('c-input');
@@ -1077,24 +900,20 @@ async function loadProfileVideos() {
   } catch(e) {}
 }
 
-// Custom confirm — no native dialog blocking
 function witzConfirm(msg) {
   return new Promise(resolve => {
-    const ov = document.getElementById('confirm-overlay');
-    const msgEl = document.getElementById('confirm-msg');
-    const okBtn = document.getElementById('confirm-ok');
-    const cancelBtn = document.getElementById('confirm-cancel');
+    const ov = document.getElementById('witz-confirm');
     if (!ov) { resolve(false); return; }
-    msgEl.textContent = msg;
+    document.getElementById('witz-confirm-msg').textContent = msg;
     ov.style.display = 'flex';
-    const cleanup = (result) => {
+    const done = (v) => {
       ov.style.display = 'none';
-      okBtn.replaceWith(okBtn.cloneNode(true));
-      cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-      resolve(result);
+      document.getElementById('witz-confirm-ok').replaceWith(document.getElementById('witz-confirm-ok').cloneNode(true));
+      document.getElementById('witz-confirm-cancel').replaceWith(document.getElementById('witz-confirm-cancel').cloneNode(true));
+      resolve(v);
     };
-    document.getElementById('confirm-ok').addEventListener('click', () => cleanup(true), { once: true });
-    document.getElementById('confirm-cancel').addEventListener('click', () => cleanup(false), { once: true });
+    document.getElementById('witz-confirm-ok').addEventListener('click', () => done(true), { once: true });
+    document.getElementById('witz-confirm-cancel').addEventListener('click', () => done(false), { once: true });
   });
 }
 
@@ -1102,35 +921,34 @@ async function deleteVideo(id, url, el) {
   if (!_user) return;
   if (!await witzConfirm('Delete this reel permanently?')) return;
   try {
-    // Use direct fetch with auth token — Supabase JS client may not be authenticated on session restore
-    const stored = JSON.parse(localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token') || '{}');
-    const token = stored?.access_token;
-    if (!token) { toast('Not logged in'); return; }
-    const delRes = await fetch(`${SURL}/rest/v1/videos?id=eq.${id}&user_id=eq.${_user.id}`, {
+    // Use direct fetch with Bearer token — works even when Supabase JS client isn't fully authed
+    const raw = JSON.parse(localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token') || '{}');
+    const token = raw?.access_token;
+    if (!token) { toast('Not authenticated'); return; }
+    const res = await fetch(SURL + '/rest/v1/videos?id=eq.' + id + '&user_id=eq.' + _user.id, {
       method: 'DELETE',
       headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + token, 'Prefer': 'return=minimal' }
     });
-    if (!delRes.ok) { toast('Delete failed: ' + delRes.status); return; }
-
-    // Delete from storage
+    if (!res.ok) { toast('Delete failed (' + res.status + ')'); return; }
+    // Delete from storage too
     try {
       const urlObj = new URL(url);
       const parts = urlObj.pathname.split('/videos/');
       if (parts.length > 1) {
-        const storagePath = decodeURIComponent(parts[1]);
-        const { error: stErr } = await sb.storage.from('videos').remove([storagePath]);
-        if (stErr) console.warn('Storage delete warn:', stErr.message);
+        const path = decodeURIComponent(parts[1]);
+        await fetch(SURL + '/storage/v1/object/videos/' + path, {
+          method: 'DELETE',
+          headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + token }
+        });
       }
-    } catch(e) { console.warn('Storage path parse failed:', e); }
-
-    // Remove the card from DOM immediately
-    const card = el?.closest('.profile-thumb') || el?.closest('.reel-card') || el?.parentElement || el;
+    } catch(e) {}
+    // Remove from DOM and update count
+    const card = el?.closest('.profile-thumb') || el?.parentElement || el;
     card?.remove();
-    toast('Reel deleted');
-    // Update reel count in profile stats
     const sn = document.getElementById('pstat-reels');
-    if (sn) sn.textContent = Math.max(0, (parseInt(sn.textContent)||1) - 1);
-  } catch(e) { console.error('deleteVideo error:', e); toast('Delete failed'); }
+    if (sn) sn.textContent = Math.max(0, (parseInt(sn.textContent) || 1) - 1);
+    toast('Reel deleted');
+  } catch(e) { console.error(e); toast('Delete failed'); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1148,176 +966,31 @@ function closeInbox() { const p=document.getElementById('inbox-panel'); if(p) p.
 // ═══════════════════════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════════════════════
-let _adminTab = 'videos';
-
 function openAdmin() {
   if (!_user || _user.email !== ADMIN) { toast('Access denied'); return; }
   const p=document.getElementById('admin-panel'); if(p) p.style.display='flex';
-  adminTab('videos');
-  adminLoadStats();
+  adminLoad();
 }
 function closeAdmin() { const p=document.getElementById('admin-panel'); if(p) p.style.display='none'; }
-
-function adminTab(tab) {
-  _adminTab = tab;
-  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('atab-'+tab)?.classList.add('active');
-  if (tab==='videos') adminLoadVideos();
-  else if (tab==='users') adminLoadUsers();
-  else if (tab==='banned') adminLoadBanned();
-}
-
-async function adminLoadStats() {
-  const sb=getSB();
-  try {
-    const [vRes, uRes, bRes] = await Promise.all([
-      sb.from('videos').select('*',{count:'exact',head:true}),
-      sb.from('profiles').select('*',{count:'exact',head:true}),
-      sb.from('banned_users').select('*',{count:'exact',head:true})
-    ]);
-    document.getElementById('stat-videos').textContent = vRes.count||0;
-    document.getElementById('stat-users').textContent = uRes.count||0;
-    document.getElementById('stat-banned').textContent = bRes.count||0;
-  } catch(e) {}
-}
-
-async function adminLoadVideos() {
+async function adminLoad() {
   const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
-  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
   try {
-    const { data:vids } = await sb.from('videos').select('*,profiles(username,id)').order('created_at',{ascending:false});
+    const { data:vids } = await sb.from('videos').select('*,profiles(username)').order('created_at',{ ascending:false });
     if (!vids?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No videos</div>'; return; }
     list.innerHTML='';
     vids.forEach(v => {
+      const row=document.createElement('div'); row.className='admin-row';
       const uname=v.profiles?.username||'unknown';
-      const uid=v.profiles?.id||v.user_id;
-      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-v-'+v.id;
-      card.innerHTML=`
-        <div style="width:48px;height:64px;background:#0d1a2a;border-radius:6px;overflow:hidden;flex-shrink:0;">
-          <video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;color:#4da6ff;margin-bottom:2px;">@${uname}</div>
-          <div style="font-size:12px;color:#e8dcc8;line-height:1.3;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${v.caption||'(no caption)'}</div>
-          <div style="font-size:10px;color:#3a5a7c;">${new Date(v.created_at).toLocaleDateString()}</div>
-        </div>
-        <div class="admin-actions">
-          <button class="abtn abtn-del" onclick="adminDelVideo('${v.id}','${v.url}','acard-v-${v.id}')">🗑 DELETE</button>
-          <button class="abtn abtn-ban" onclick="adminBanUser('${uid}','${uname}','acard-v-${v.id}')">🚫 BAN USER</button>
-        </div>`;
-      list.appendChild(card);
+      row.innerHTML=`<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;"><video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||''}</div></div><button onclick="adminDel('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">DEL</button>`;
+      list.appendChild(row);
     });
-  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
+  } catch(e) {}
 }
-
-async function adminLoadUsers() {
-  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
-  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
-  try {
-    const { data:users } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
-    if (!users?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No users</div>'; return; }
-    list.innerHTML='';
-    users.forEach(u => {
-      if (u.id === _user?.id) return; // skip self
-      const init=(u.username||'U').substring(0,2).toUpperCase();
-      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-u-'+u.id;
-      card.innerHTML=`
-        <div style="width:44px;height:44px;border-radius:50%;background:#1a3a8f;border:2px solid #0f2255;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:16px;font-weight:700;color:#fff;flex-shrink:0;">${init}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;color:#e8dcc8;font-family:'Barlow Condensed';letter-spacing:1px;">@${u.username||'unknown'}</div>
-          <div style="font-size:10px;color:#3a5a7c;margin-top:2px;">Joined ${new Date(u.created_at||Date.now()).toLocaleDateString()}</div>
-        </div>
-        <div class="admin-actions">
-          <button class="abtn abtn-ban" onclick="adminBanUser('${u.id}','${u.username}','acard-u-${u.id}')">🚫 BAN</button>
-          <button class="abtn abtn-del" onclick="adminDeleteAccount('${u.id}','${u.username}','acard-u-${u.id}')">💀 DELETE</button>
-        </div>`;
-      list.appendChild(card);
-    });
-  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
-}
-
-async function adminLoadBanned() {
-  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
-  list.innerHTML='<div style="padding:16px;color:#3a5a7c;text-align:center;letter-spacing:2px;font-size:11px;">LOADING...</div>';
-  try {
-    const { data:banned } = await sb.from('banned_users').select('*').order('created_at',{ascending:false});
-    if (!banned?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No banned users</div>'; return; }
-    list.innerHTML='';
-    banned.forEach(b => {
-      const card=document.createElement('div'); card.className='admin-card'; card.id='acard-b-'+b.user_id;
-      card.innerHTML=`
-        <div style="width:44px;height:44px;border-radius:50%;background:#3a0a0a;border:2px solid #8b0000;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🚫</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;color:#ff6666;font-family:'Barlow Condensed';letter-spacing:1px;">@${b.username||'unknown'}</div>
-          <div style="font-size:11px;color:#3a5a7c;margin-top:2px;">Reason: ${b.reason||'No reason given'}</div>
-          <div style="font-size:10px;color:#3a5a7c;margin-top:2px;">Banned ${new Date(b.created_at).toLocaleDateString()}</div>
-        </div>
-        <div class="admin-actions">
-          <button class="abtn abtn-unban" onclick="adminUnban('${b.user_id}','${b.username}','acard-b-${b.user_id}')">✅ UNBAN</button>
-        </div>`;
-      list.appendChild(card);
-    });
-  } catch(e) { list.innerHTML='<div style="padding:16px;color:#ff6666;">Error loading</div>'; }
-}
-
-async function adminDelVideo(id, url, cardId) {
-  if (!await witzConfirm('Delete this video permanently?')) return;
+async function adminDel(id,url,row) {
+  if (!confirm('Delete permanently?')) return;
   const sb=getSB();
-  try {
-    await sb.from('videos').delete().eq('id',id);
-    try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
-    document.getElementById(cardId)?.remove();
-    toast('Video deleted'); loadFeed(); adminLoadStats();
-  } catch(e) { toast('Delete failed'); }
-}
-
-async function adminBanUser(uid, uname, cardId) {
-  const reason = prompt(`Reason for banning @${uname}? (optional)`);
-  if (reason === null) return; // cancelled
-  const sb=getSB();
-  try {
-    await sb.from('banned_users').upsert({ user_id:uid, username:uname, reason:reason||'Violation of community guidelines' });
-    // Delete all their videos
-    const { data:vids } = await sb.from('videos').select('id,url').eq('user_id',uid);
-    if (vids?.length) {
-      await sb.from('videos').delete().eq('user_id',uid);
-      for (const v of vids) {
-        try { const p=v.url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
-      }
-    }
-    document.getElementById(cardId)?.remove();
-    toast(`@${uname} banned`); loadFeed(); adminLoadStats();
-  } catch(e) { toast('Ban failed — make sure banned_users table exists'); }
-}
-
-async function adminUnban(uid, uname, cardId) {
-  if (!confirm(`Unban @${uname}?`)) return;
-  const sb=getSB();
-  try {
-    await sb.from('banned_users').delete().eq('user_id',uid);
-    document.getElementById(cardId)?.remove();
-    toast(`@${uname} unbanned`); adminLoadStats();
-  } catch(e) { toast('Unban failed'); }
-}
-
-async function adminDeleteAccount(uid, uname, cardId) {
-  if (!confirm(`PERMANENTLY DELETE @${uname}'s account and all their content? This cannot be undone.`)) return;
-  const sb=getSB();
-  try {
-    // Delete videos + storage
-    const { data:vids } = await sb.from('videos').select('id,url').eq('user_id',uid);
-    if (vids?.length) {
-      await sb.from('videos').delete().eq('user_id',uid);
-      for (const v of vids) {
-        try { const p=v.url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {}
-      }
-    }
-    await sb.from('likes').delete().eq('user_id',uid);
-    await sb.from('comments').delete().eq('user_id',uid);
-    await sb.from('profiles').delete().eq('id',uid);
-    document.getElementById(cardId)?.remove();
-    toast(`@${uname} account deleted`); loadFeed(); adminLoadStats();
-  } catch(e) { toast('Delete account failed'); }
+  try { await sb.from('videos').delete().eq('id',id); try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {} row?.remove(); toast('Deleted'); loadFeed(); } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1367,9 +1040,7 @@ function navTo(el, section) {
 window.addEventListener('load', () => {
   paintStars(document.getElementById('splash-canvas'));
 
-  const sb = getSB();
-
-  // After splash, read session from localStorage — zero network calls
+  // After splash: restore session from localStorage (no network call) or show onboard
   setTimeout(() => {
     try {
       const raw = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
@@ -1377,10 +1048,8 @@ window.addEventListener('load', () => {
         const parsed = JSON.parse(raw);
         const user = parsed?.user;
         const expiresAt = parsed?.expires_at;
-        const notExpired = !expiresAt || (Date.now() / 1000 < expiresAt + 300); // 5min grace
-        if (user?.id && notExpired) {
-          // Set _user directly — Supabase client already has the token in localStorage
-          // and will use it automatically for all subsequent requests
+        const valid = user?.id && (!expiresAt || Date.now() / 1000 < expiresAt + 300);
+        if (valid) {
           _user = user;
           _username = (user.user_metadata?.username || user.email || 'warrior').split('@')[0].toUpperCase();
           enterApp();
@@ -1392,13 +1061,6 @@ window.addEventListener('load', () => {
     paintStars(document.getElementById('onboard-canvas'));
     updateOb(0);
   }, 1500);
-
-  // onAuthStateChange handles token refresh and logout in background
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT') {
-      _user = null; _username = 'WARRIOR';
-    }
-  });
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1416,103 +1078,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Enter key on auth
   document.getElementById('input-password')?.addEventListener('keydown', e => { if(e.key==='Enter') authSubmit(); });
 });
-
-
-// ═══════════════════════════════════════════════════════
-// MUTE TOGGLE
-// ═══════════════════════════════════════════════════════
-let _globalMuted = true;
-
-function toggleMute(btn) {
-  _globalMuted = !_globalMuted;
-  // Update all visible videos
-  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
-  // Update all mute buttons
-  document.querySelectorAll('#reel-wrap button').forEach(b => {
-    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
-  });
-}
-
-function toggleMuteByVideo(vid) {
-  _globalMuted = !_globalMuted;
-  document.querySelectorAll('#reel-wrap video').forEach(v => { v.muted = _globalMuted; });
-  document.querySelectorAll('#reel-wrap button').forEach(b => {
-    if (b.textContent === '🔇' || b.textContent === '🔊') b.textContent = _globalMuted ? '🔇' : '🔊';
-  });
-}
-
-// ═══════════════════════════════════════════════════════
-// CAMERA RECORDING
-// ═══════════════════════════════════════════════════════
-let _mediaStream = null, _recorder = null, _recChunks = [], _recTimer = null, _recSecs = 0;
-
-async function openCamera() {
-  const modal = document.getElementById('cam-modal');
-  if (!modal) return;
-  try {
-    _mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio: true });
-    const prev = document.getElementById('cam-preview');
-    if (prev) { prev.srcObject = _mediaStream; prev.play(); }
-    modal.style.display = 'flex';
-    _recChunks = [];
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
-    const timer = document.getElementById('cam-timer');
-    if (timer) timer.textContent = '0:00';
-  } catch(e) {
-    toast('Camera access denied');
-  }
-}
-
-function closeCamera() {
-  stopStream();
-  const modal = document.getElementById('cam-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function stopStream() {
-  if (_mediaStream) { _mediaStream.getTracks().forEach(t => t.stop()); _mediaStream = null; }
-  if (_recTimer) { clearInterval(_recTimer); _recTimer = null; }
-  if (_recorder && _recorder.state !== 'inactive') { _recorder.stop(); }
-}
-
-function toggleRecord() {
-  if (_recorder && _recorder.state === 'recording') {
-    // STOP
-    _recorder.stop();
-    clearInterval(_recTimer);
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'REC'; btn.style.background = '#cc2222'; }
-  } else {
-    // START
-    _recChunks = []; _recSecs = 0;
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    _recorder = new MediaRecorder(_mediaStream, { mimeType });
-    _recorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
-    _recorder.onstop = () => {
-      const blob = new Blob(_recChunks, { type: 'video/webm' });
-      const file = new File([blob], 'witz_reel_' + Date.now() + '.webm', { type: 'video/webm' });
-      // inject into file input
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      const fp = document.getElementById('file-pick');
-      if (fp) { fp.files = dt.files; fileSelected(fp); }
-      closeCamera();
-      toast('Video recorded ✓ — add caption and post!');
-    };
-    _recorder.start();
-    const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = 'STOP'; btn.style.background = '#8b0000'; }
-    _recTimer = setInterval(() => {
-      _recSecs++;
-      const m = Math.floor(_recSecs/60), s = _recSecs%60;
-      const t = document.getElementById('cam-timer');
-      if (t) t.textContent = m + ':' + (s<10?'0':'')+s;
-      if (_recSecs >= 180) toggleRecord(); // max 3 min
-    }, 1000);
-  }
-}
-
 </script>
+
+  <!-- Custom confirm modal -->
+  <div id="witz-confirm" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);">
+    <div style="background:#050e25;border:1px solid #1a3a6a;border-radius:16px;padding:28px 24px;max-width:300px;width:90%;text-align:center;">
+      <div id="witz-confirm-msg" style="color:#e0eaff;font-family:Barlow Condensed,sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:24px;">Are you sure?</div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="witz-confirm-cancel" style="flex:1;background:transparent;border:1px solid #1a3a6a;border-radius:10px;padding:12px;color:#4a8ab5;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">CANCEL</button>
+        <button id="witz-confirm-ok" style="flex:1;background:#8b0000;border:none;border-radius:10px;padding:12px;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">DELETE</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
