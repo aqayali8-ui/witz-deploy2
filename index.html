@@ -419,9 +419,13 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     </div>
   </div>
   <!-- comment sheet -->
+  <div id="c-overlay" onclick="closeComments()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:29;"></div>
   <div id="c-sheet">
     <div class="c-handle"></div>
-    <div class="c-title">COMMENTS</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="c-title" style="margin-bottom:0;">COMMENTS</div>
+      <button onclick="closeComments()" style="background:none;border:none;color:#4a8ab5;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>
+    </div>
     <div id="c-list"></div>
     <div class="c-input-row">
       <input class="c-input" id="c-input" type="text" placeholder="Add a comment...">
@@ -933,9 +937,19 @@ function switchFeed(el) {
 function openComments(videoId) {
   if (videoId) _currentVideoId = videoId;
   document.getElementById('c-sheet')?.classList.add('open');
+  const ov = document.getElementById('c-overlay');
+  if (ov) ov.style.display = 'block';
   if (_currentVideoId) loadComments(_currentVideoId);
 }
-function closeComments() { document.getElementById('c-sheet')?.classList.remove('open'); }
+function closeComments() {
+  document.getElementById('c-sheet')?.classList.remove('open');
+  const ov = document.getElementById('c-overlay');
+  if (ov) ov.style.display = 'none';
+  const cl = document.getElementById('c-list');
+  if (cl) cl.innerHTML = '';
+  const ci = document.getElementById('c-input');
+  if (ci) ci.value = '';
+}
 
 async function loadComments(videoId) {
   const sb = getSB(); if (!sb) return;
