@@ -1351,29 +1351,25 @@ window.addEventListener('load', () => {
 
   const sb = getSB();
 
-  // After splash, restore session properly using setSession so Supabase auth works
-  setTimeout(async () => {
+  // After splash, read session from localStorage — zero network calls
+  setTimeout(() => {
     try {
       const raw = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
       if (raw) {
         const parsed = JSON.parse(raw);
-        const accessToken = parsed?.access_token;
-        const refreshToken = parsed?.refresh_token;
+        const user = parsed?.user;
         const expiresAt = parsed?.expires_at;
-        const notExpired = !expiresAt || (Date.now() / 1000 < expiresAt);
-        if (accessToken && refreshToken && notExpired) {
-          // Restore full Supabase session — now all DB calls are authenticated
-          const { data, error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-          if (data?.session?.user) {
-            _user = data.session.user;
-            await loadProfile();
-            enterApp();
-            return;
-          }
+        const notExpired = !expiresAt || (Date.now() / 1000 < expiresAt + 300); // 5min grace
+        if (user?.id && notExpired) {
+          // Set _user directly — Supabase client already has the token in localStorage
+          // and will use it automatically for all subsequent requests
+          _user = user;
+          _username = (user.user_metadata?.username || user.email || 'warrior').split('@')[0].toUpperCase();
+          enterApp();
+          return;
         }
       }
-    } catch(e) { console.warn('Session restore failed:', e); }
-    // No valid session — show onboard
+    } catch(e) {}
     showScreen('onboard');
     paintStars(document.getElementById('onboard-canvas'));
     updateOb(0);
