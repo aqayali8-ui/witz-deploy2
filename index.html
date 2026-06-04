@@ -369,9 +369,9 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <button class="panel-close" onclick="closeUpload()">✕</button>
   </div>
   <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
-    <div class="upload-zone-icon">🎬</div>
-    <div class="upload-zone-txt">TAP TO SELECT VIDEO</div>
-    <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 200MB</div>
+    <div class="upload-zone-icon" id="upload-icon">🎬</div>
+    <div class="upload-zone-txt">TAP TO SELECT VIDEO OR IMAGE</div>
+    <div class="upload-zone-sub" id="upload-file-name">MP4, MOV, JPG, PNG up to 200MB</div>
     <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
   </div>
   <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..."></textarea>
@@ -671,7 +671,10 @@ function buildReel(v) {
   const init = (v.profiles?.username || 'W').substring(0,2).toUpperCase();
 
   div.innerHTML = `
-    <video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+    ${v.media_type === 'image'
+      ? `<img src="${v.url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">`
+      : `<video src="${v.url}" loop playsinline muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>`
+    }
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
     <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -851,7 +854,10 @@ function fileSelected(inp) {
   if (f.size > 200*1024*1024) { toast('Max 200MB'); inp.value=''; return; }
   const fn = document.getElementById('upload-file-name');
   if (fn) fn.textContent = f.name.substring(0,34) + ' (' + (f.size/1024/1024).toFixed(1) + 'MB)';
-  toast('Video selected ✓');
+  const icon = document.getElementById('upload-icon');
+  const isImage = f.type.startsWith('image/');
+  if (icon) icon.textContent = isImage ? '🖼️' : '🎬';
+  toast((isImage ? 'Image' : 'Video') + ' selected ✓');
 }
 
 async function submitUpload() {
@@ -859,7 +865,7 @@ async function submitUpload() {
   if (!_user) { toast('Sign in first'); return; }
   const cap = (document.getElementById('upload-caption')?.value || '').trim();
   const file = document.getElementById('file-pick')?.files?.[0];
-  if (!file) { toast('Select a video first'); return; }
+  if (!file) { toast('Select a video or image first'); return; }
   if (!cap) { toast('Add a caption'); return; }
   const btn = document.querySelector('.btn-upload');
   if (btn) { btn.textContent='UPLOADING...'; btn.disabled=true; }
@@ -869,8 +875,9 @@ async function submitUpload() {
     const { error: upErr } = await sb.storage.from('videos').upload(path, file, { cacheControl:'3600', upsert:false });
     if (upErr) { toast('Upload failed: ' + upErr.message); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } return; }
     const { data: { publicUrl } } = sb.storage.from('videos').getPublicUrl(path);
-    await sb.from('videos').insert({ user_id:_user.id, url:publicUrl, caption:cap });
-    closeUpload(); toast('🔥 Reel posted!'); loadFeed();
+    const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+    await sb.from('videos').insert({ user_id:_user.id, url:publicUrl, caption:cap, media_type:mediaType });
+    closeUpload(); toast('🔥 Posted!'); loadFeed();
   } catch(e) { toast('Upload error'); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } }
 }
 
@@ -894,7 +901,10 @@ async function loadProfileVideos() {
     grid.innerHTML='';
     vids.forEach(v => {
       const t = document.createElement('div'); t.className='profile-thumb';
-      t.innerHTML=`<video src="${v.url}" muted preload="metadata"></video><button class="del-btn" onclick="deleteVideo('${v.id}','${v.url}',this.parentElement)">✕</button>`;
+      const media = v.media_type === 'image'
+        ? `<img src="${v.url}" style="width:100%;height:100%;object-fit:cover;">`
+        : `<video src="${v.url}" muted preload="metadata"></video>`;
+      t.innerHTML = media + `<button class="del-btn" onclick="deleteVideo('${v.id}','${v.url}',this.parentElement)">✕</button>`;
       grid.appendChild(t);
     });
   } catch(e) {}
