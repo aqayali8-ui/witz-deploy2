@@ -204,7 +204,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .c-input{flex:1;background:#080f28;border:1px solid #0f1e30;border-radius:20px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;}
 .c-send{background:var(--royal);border:none;border-radius:50%;width:36px;height:36px;color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 /* ── PANELS ── */
-#search-panel,#profile-panel,#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;}
+#search-panel,#profile-panel,#upload-panel{position:fixed;inset:0;background:var(--night);z-index:50;display:none;flex-direction:column;padding:20px;} #profile-panel{position:fixed;}
 #search-panel.open,#profile-panel.open,#upload-panel.open{display:flex;}
 #inbox-panel,#admin-panel,#forgot-panel{position:fixed;inset:0;background:#050D1A;z-index:60;flex-direction:column;display:none;}
 .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
@@ -438,16 +438,6 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <button class="signin-banner-btn" onclick="goSignUp()">JOIN WITZ</button>
   </div>
 
-  <!-- Custom confirm modal -->
-  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;">
-    <div style="background:#050e25;border:1px solid #1a3a6a;border-radius:16px;padding:28px 24px;max-width:300px;width:90%;text-align:center;">
-      <div id="confirm-msg" style="color:#e0eaff;font-family:Barlow Condensed,sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:24px;">Are you sure?</div>
-      <div style="display:flex;gap:12px;justify-content:center;">
-        <button id="confirm-cancel" style="flex:1;background:transparent;border:1px solid #1a3a6a;border-radius:10px;padding:12px;color:#4a8ab5;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">CANCEL</button>
-        <button id="confirm-ok" style="flex:1;background:#8b0000;border:none;border-radius:10px;padding:12px;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">DELETE</button>
-      </div>
-    </div>
-  </div>
   <!-- admin btn hidden unless owner -->
   <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:50px;right:12px;background:#8b0000;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
 </div>
@@ -464,6 +454,16 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 
 <!-- ══ PROFILE PANEL ══ -->
 <div id="profile-panel">
+  <!-- Confirm modal inside profile panel so it renders above it -->
+  <div id="confirm-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#050e25;border:1px solid #1a3a6a;border-radius:16px;padding:28px 24px;max-width:300px;width:90%;text-align:center;">
+      <div id="confirm-msg" style="color:#e0eaff;font-family:Barlow Condensed,sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:24px;">Are you sure?</div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="confirm-cancel" style="flex:1;background:transparent;border:1px solid #1a3a6a;border-radius:10px;padding:12px;color:#4a8ab5;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">CANCEL</button>
+        <button id="confirm-ok" style="flex:1;background:#8b0000;border:none;border-radius:10px;padding:12px;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">DELETE</button>
+      </div>
+    </div>
+  </div>
   <div class="panel-header">
     <span class="panel-title">PROFILE</span>
     <button class="panel-close" onclick="closeProfile()">✕</button>
