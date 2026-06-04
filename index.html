@@ -1101,11 +1101,16 @@ function witzConfirm(msg) {
 async function deleteVideo(id, url, el) {
   if (!_user) return;
   if (!await witzConfirm('Delete this reel permanently?')) return;
-  const sb = getSB();
   try {
-    // Delete from DB first
-    const { error: dbErr } = await sb.from('videos').delete().eq('id',id).eq('user_id',_user.id);
-    if (dbErr) { console.error('DB delete error:', dbErr); toast('Delete failed: ' + dbErr.message); return; }
+    // Use direct fetch with auth token — Supabase JS client may not be authenticated on session restore
+    const stored = JSON.parse(localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token') || '{}');
+    const token = stored?.access_token;
+    if (!token) { toast('Not logged in'); return; }
+    const delRes = await fetch(`${SURL}/rest/v1/videos?id=eq.${id}&user_id=eq.${_user.id}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + token, 'Prefer': 'return=minimal' }
+    });
+    if (!delRes.ok) { toast('Delete failed: ' + delRes.status); return; }
 
     // Delete from storage
     try {
