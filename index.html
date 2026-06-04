@@ -590,7 +590,20 @@ let _authMode = 'login', _obSlide = 0, _toastTimer = null;
 // ═══════════════════════════════════════════════════════
 function getSB() {
   if (!_sb) {
-    try { _sb = supabase.createClient(SURL, SKEY); } catch(e) { _sb = null; }
+    try {
+      // Pass stored session to client so it's authenticated from the start
+      const stored = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
+      const parsed = stored ? JSON.parse(stored) : null;
+      const accessToken = parsed?.access_token;
+      const refreshToken = parsed?.refresh_token;
+      _sb = supabase.createClient(SURL, SKEY, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
+      // Manually set the session so Supabase knows the user is logged in
+      if (accessToken && refreshToken) {
+        _sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).catch(() => {});
+      }
+    } catch(e) { _sb = null; }
   }
   return _sb;
 }
