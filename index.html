@@ -1351,35 +1351,32 @@ window.addEventListener('load', () => {
 
   const sb = getSB();
 
-  // Read session from localStorage directly — no network call, no hang
-  function getStoredSession() {
+  // After splash, restore session properly using setSession so Supabase auth works
+  setTimeout(async () => {
     try {
       const raw = localStorage.getItem('sb-mimwbeexqskhefistbvt-auth-token');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      const user = parsed?.user || parsed?.currentSession?.user;
-      const expiresAt = parsed?.expires_at || parsed?.currentSession?.expires_at;
-      if (!user) return null;
-      // Check not expired (expires_at is unix timestamp in seconds)
-      if (expiresAt && Date.now() / 1000 > expiresAt) return null;
-      return user;
-    } catch(e) { return null; }
-  }
-
-  // After splash, route based on stored session
-  setTimeout(async () => {
-    const storedUser = getStoredSession();
-    if (storedUser) {
-      _user = storedUser;
-      // Load profile username in background — don't block
-      loadProfile().then(() => {
-        enterApp();
-      }).catch(() => enterApp());
-    } else {
-      showScreen('onboard');
-      paintStars(document.getElementById('onboard-canvas'));
-      updateOb(0);
-    }
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const accessToken = parsed?.access_token;
+        const refreshToken = parsed?.refresh_token;
+        const expiresAt = parsed?.expires_at;
+        const notExpired = !expiresAt || (Date.now() / 1000 < expiresAt);
+        if (accessToken && refreshToken && notExpired) {
+          // Restore full Supabase session — now all DB calls are authenticated
+          const { data, error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          if (data?.session?.user) {
+            _user = data.session.user;
+            await loadProfile();
+            enterApp();
+            return;
+          }
+        }
+      }
+    } catch(e) { console.warn('Session restore failed:', e); }
+    // No valid session — show onboard
+    showScreen('onboard');
+    paintStars(document.getElementById('onboard-canvas'));
+    updateOb(0);
   }, 1500);
 
   // onAuthStateChange handles token refresh and logout in background
