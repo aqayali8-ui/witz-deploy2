@@ -437,6 +437,17 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <span class="signin-banner-msg" id="signin-banner-msg">Sign in to interact</span>
     <button class="signin-banner-btn" onclick="goSignUp()">JOIN WITZ</button>
   </div>
+
+  <!-- Custom confirm modal -->
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:#050e25;border:1px solid #1a3a6a;border-radius:16px;padding:28px 24px;max-width:300px;width:90%;text-align:center;">
+      <div id="confirm-msg" style="color:#e0eaff;font-family:Barlow Condensed,sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:24px;">Are you sure?</div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="confirm-cancel" style="flex:1;background:transparent;border:1px solid #1a3a6a;border-radius:10px;padding:12px;color:#4a8ab5;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">CANCEL</button>
+        <button id="confirm-ok" style="flex:1;background:#8b0000;border:none;border-radius:10px;padding:12px;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">DELETE</button>
+      </div>
+    </div>
+  </div>
   <!-- admin btn hidden unless owner -->
   <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:50px;right:12px;background:#8b0000;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
 </div>
@@ -1053,9 +1064,30 @@ async function loadProfileVideos() {
   } catch(e) {}
 }
 
+// Custom confirm — no native dialog blocking
+function witzConfirm(msg) {
+  return new Promise(resolve => {
+    const ov = document.getElementById('confirm-overlay');
+    const msgEl = document.getElementById('confirm-msg');
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    if (!ov) { resolve(false); return; }
+    msgEl.textContent = msg;
+    ov.style.display = 'flex';
+    const cleanup = (result) => {
+      ov.style.display = 'none';
+      okBtn.replaceWith(okBtn.cloneNode(true));
+      cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+      resolve(result);
+    };
+    document.getElementById('confirm-ok').addEventListener('click', () => cleanup(true), { once: true });
+    document.getElementById('confirm-cancel').addEventListener('click', () => cleanup(false), { once: true });
+  });
+}
+
 async function deleteVideo(id, url, el) {
   if (!_user) return;
-  if (!confirm('Delete this reel permanently?')) return;
+  if (!await witzConfirm('Delete this reel permanently?')) return;
   const sb = getSB();
   try {
     // Delete from DB first
@@ -1211,7 +1243,7 @@ async function adminLoadBanned() {
 }
 
 async function adminDelVideo(id, url, cardId) {
-  if (!confirm('Delete this video permanently?')) return;
+  if (!await witzConfirm('Delete this video permanently?')) return;
   const sb=getSB();
   try {
     await sb.from('videos').delete().eq('id',id);
