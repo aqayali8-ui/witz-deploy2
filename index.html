@@ -74,9 +74,9 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .topnav-tab{background:none;border:none;color:var(--muted);font-family:'Barlow Condensed';font-size:15px;letter-spacing:2px;cursor:pointer;padding:4px 0;border-bottom:2px solid transparent;transition:.2s;}
 .topnav-tab.active{color:var(--white);border-bottom-color:var(--sky);}
 #nav-search-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;}
-#reel-wrap{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scroll-snap-stop:always;overscroll-behavior-y:contain;}
+#reel-wrap{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scroll-snap-stop:always;overscroll-behavior-y:contain;scroll-behavior:smooth;height:calc(100vh - 110px);max-height:calc(100vh - 110px);}
 #reel-wrap::-webkit-scrollbar{display:none;}
-.real-reel{position:relative;height:calc(100vh - 110px);scroll-snap-align:start;overflow:hidden;background:#000;}
+.real-reel{position:relative;height:calc(100vh - 110px);min-height:calc(100vh - 110px);max-height:calc(100vh - 110px);scroll-snap-align:start;overflow:hidden;background:#000;flex-shrink:0;}
 .reel-av{width:38px;height:38px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:13px;font-weight:700;color:var(--white);flex-shrink:0;}
 .reel-uname{font-family:'Barlow Condensed';font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;}
 .reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
