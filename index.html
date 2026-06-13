@@ -80,7 +80,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 #reel-col::-webkit-scrollbar{display:none;}
 @media(max-width:500px){#reel-center{display:block;}#reel-col{max-width:100%;}}
 #reel-wrap::-webkit-scrollbar{display:none;}
-.real-reel{position:relative;height:calc(100vh - 48px);min-height:calc(100vh - 48px);max-height:calc(100vh - 48px);scroll-snap-align:start;overflow:hidden;background:#000;flex-shrink:0;}
+.real-reel{position:relative;height:calc(100vh - 48px);min-height:calc(100vh - 48px);max-height:calc(100vh - 48px);scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;flex-shrink:0;}
 .reel-av{width:38px;height:38px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:13px;font-weight:700;color:var(--white);flex-shrink:0;}
 .reel-uname{font-family:'Barlow Condensed';font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;}
 .reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
@@ -379,14 +379,14 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
       <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this);switchUploadTab('caption')">
     </div>
     <!-- Record button -->
-    <div style="position:absolute;bottom:100px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;">
+    <div style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;">
       <div id="btn-start-rec" onclick="startRecording()" style="width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <div style="width:52px;height:52px;border-radius:50%;background:#cc2222;"></div>
       </div>
       <span style="color:#fff;font-family:'Barlow Condensed';font-size:11px;letter-spacing:2px;opacity:0.7;">HOLD OR TAP</span>
     </div>
     <!-- Stop button (hidden until recording) -->
-    <div id="btn-stop-rec" onclick="stopRecording()" style="display:none;position:absolute;bottom:100px;left:50%;transform:translateX(-50%);width:72px;height:72px;border-radius:12px;border:4px solid #fff;background:transparent;cursor:pointer;align-items:center;justify-content:center;">
+    <div id="btn-stop-rec" onclick="stopRecording()" style="display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);width:72px;height:72px;border-radius:12px;border:4px solid #fff;background:transparent;cursor:pointer;align-items:center;justify-content:center;">
       <div style="width:28px;height:28px;border-radius:4px;background:#fff;"></div>
     </div>
   </div>
@@ -453,11 +453,14 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 const SURL = 'https://mimwbeexqskhefistbvt.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
 const ADMIN = 'aqayali8@gmail.com';
-let _isMuted = false;
-let _audioUnlocked = false;
+window._isMuted = false;
+window._audioUnlocked = false;
+let _isMuted = window._isMuted;
+let _audioUnlocked = window._audioUnlocked;
 function unlockAudio() {
   if (_audioUnlocked) return;
   _audioUnlocked = true;
+  window._audioUnlocked = true;
   // Unmute all playing videos immediately
   document.querySelectorAll('video').forEach(v => {
     if (!v.paused && !_isMuted) {
@@ -503,6 +506,7 @@ function tapVideo(vid) {
 }
 function toggleMute() {
   _isMuted = !_isMuted;
+  window._isMuted = _isMuted;
   document.querySelectorAll('video').forEach(v => v.muted = _isMuted);
   updateMuteUI();
 }
@@ -1359,6 +1363,20 @@ document.addEventListener('DOMContentLoaded', () => {
   </svg>
 </div>
 
+
+
+// ═══ SNAP FIX: set exact reel heights to match scroll container ═══
+function fixReelHeights() {
+  const col = document.getElementById('reel-col');
+  if (!col) return;
+  const h = col.clientHeight;
+  document.querySelectorAll('.real-reel').forEach(r => {
+    r.style.height = h + 'px';
+    r.style.minHeight = h + 'px';
+    r.style.maxHeight = h + 'px';
+  });
+}
+window.addEventListener('resize', fixReelHeights);
 
 // ═══ SCROLL SNAP: one reel at a time, no skipping ═══
 (function(){
