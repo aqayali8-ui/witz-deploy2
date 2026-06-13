@@ -75,12 +75,12 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .topnav-tab.active{color:var(--white);border-bottom-color:var(--sky);}
 #nav-search-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;}
 #reel-wrap{flex:1;}
-#reel-center{display:flex;justify-content:center;height:calc(100vh - 48px);}
+#reel-center{display:flex;justify-content:center;height:calc(100vh - 108px);}
 #reel-col{width:100%;max-width:420px;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-snap-stop:always;overscroll-behavior-y:contain;scroll-behavior:smooth;scrollbar-width:none;padding:0!important;margin:0;}
 #reel-col::-webkit-scrollbar{display:none;}
 @media(max-width:500px){#reel-center{display:block;}#reel-col{max-width:100%;}}
 #reel-wrap::-webkit-scrollbar{display:none;}
-.real-reel{position:relative;height:calc(100vh - 48px);min-height:calc(100vh - 48px);max-height:calc(100vh - 48px);scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;flex-shrink:0;}
+.real-reel{position:relative;height:calc(100vh - 108px);min-height:calc(100vh - 108px);max-height:calc(100vh - 108px);scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;flex-shrink:0;}
 .reel-av{width:38px;height:38px;border-radius:50%;background:var(--royal);border:2px solid var(--sky);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-size:13px;font-weight:700;color:var(--white);flex-shrink:0;}
 .reel-uname{font-family:'Barlow Condensed';font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;}
 .reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
@@ -755,6 +755,10 @@ async function loadFeed() {
   }
   wrap.innerHTML = '';
   videos.forEach(v => wrap.appendChild(buildReel(v)));
+  // Fix heights precisely after layout settles
+  setTimeout(fixReelHeights, 50);
+  setTimeout(fixReelHeights, 300);
+  setTimeout(fixReelHeights, 800);
   // Force-play first video — observer may not fire on initial load
   setTimeout(() => {
     const firstVid = wrap.querySelector('video');
@@ -774,14 +778,14 @@ function buildReel(v) {
       : `<video src="${v.url}" loop playsinline preload="metadata" onclick="tapVideo(this)" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer;"></video>`
     }
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
-    <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
+    <div style="position:absolute;bottom:20px;left:14px;right:70px;z-index:5;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <div class="reel-av">${init}</div>
         <span class="reel-uname">${uname}</span>
       </div>
       <div class="reel-cap">${v.caption || ''}</div>
     </div>
-    <div style="position:absolute;bottom:72px;right:8px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:5;">
+    <div style="position:absolute;bottom:20px;right:8px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:5;">
       <div class="act-col" onclick="doLike('${v.id}',this)" style="cursor:pointer;">
         <div class="tribal-btn" id="rl-like-${v.id}">
           <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
@@ -1370,11 +1374,16 @@ function fixReelHeights() {
   const col = document.getElementById('reel-col');
   if (!col) return;
   const h = col.clientHeight;
+  // Force exact height so scrollHeight = reelCount * h exactly
   document.querySelectorAll('.real-reel').forEach(r => {
     r.style.height = h + 'px';
     r.style.minHeight = h + 'px';
     r.style.maxHeight = h + 'px';
+    r.style.flexShrink = '0';
   });
+  // Verify no mismatch
+  const total = [...document.querySelectorAll('.real-reel')].reduce((a,r)=>a+r.clientHeight,0);
+  console.log('[WITZ snap] col:'+h+' total:'+total+' mismatch:'+(col.scrollHeight-total));
 }
 window.addEventListener('resize', fixReelHeights);
 
