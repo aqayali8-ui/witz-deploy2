@@ -472,35 +472,32 @@ function unlockAudio() {
 ['touchstart','click','keydown','wheel'].forEach(ev =>
   document.addEventListener(ev, unlockAudio, {once:true, passive:true})
 );
-function expandReel(btn) {
+function toggleFullscreen(btn) {
   const reel = btn.closest('.real-reel');
-  const col = document.getElementById('reel-col') || document.getElementById('reel-wrap');
-  if (!reel || !col) return;
-  const isExpanded = reel.dataset.expanded === '1';
-  if (isExpanded) {
-    reel.dataset.expanded = '0';
-    reel.style.position = '';
-    reel.style.inset = '';
-    reel.style.zIndex = '';
-    reel.style.width = '';
-    reel.style.height = '';
-    col.style.maxWidth = '';
-    const svg = btn.querySelector('svg');
-    if (svg) svg.innerHTML = '<path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm16 5h-5v2h7v-7h-2v5z" fill="#e8dcc8"/>';
-    btn.querySelector('.act-label').textContent = 'EXPAND';
+  if (!reel) return;
+  const svg = btn.querySelector('svg');
+  if (!document.fullscreenElement) {
+    // Go fullscreen
+    const el = reel.querySelector('video') || reel;
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el);
+    if (svg) svg.innerHTML = '<path class="fs-expand" d="M5 16H3v5h5v-2H5v-3zm-2-8h2V5h3V3H3v5zm13 11h-3v2h5v-5h-2v3zM14 3v2h3v3h2V3h-5z" fill="#e8dcc8"/>';
+    btn.querySelector('.act-label').textContent = 'EXIT';
   } else {
-    reel.dataset.expanded = '1';
-    reel.style.position = 'fixed';
-    reel.style.inset = '0';
-    reel.style.zIndex = '200';
-    reel.style.width = '100vw';
-    reel.style.height = '100vh';
-    col.style.maxWidth = '100vw';
-    const svg = btn.querySelector('svg');
-    if (svg) svg.innerHTML = '<path d="M5 16H3v5h5v-2H5v-3zm-2-8h2V5h3V3H3v5zm13 11h-3v2h5v-5h-2v3zM14 3v2h3v3h2V3h-5z" fill="#e8dcc8"/>';
-    btn.querySelector('.act-label').textContent = 'CLOSE';
+    // Exit fullscreen
+    (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
+    if (svg) svg.innerHTML = '<path class="fs-expand" d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z" fill="#e8dcc8"/>';
+    btn.querySelector('.act-label').textContent = 'FULL';
   }
 }
+// Reset icon when user exits fullscreen via Esc
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    document.querySelectorAll('.act-label').forEach(l => { if (l.textContent==='EXIT') l.textContent='FULL'; });
+    document.querySelectorAll('.fs-expand').forEach(p => {
+      p.setAttribute('d','M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z');
+    });
+  }
+});
 function tapVideo(vid) {
   if (vid.paused) { vid.play().catch(()=>{}); } else { vid.pause(); }
 }
@@ -827,6 +824,14 @@ function buildReel(v) {
         </div>
         <span class="act-label">SHARE</span>
       </div>
+      <div class="act-col" onclick="toggleFullscreen(this)" style="cursor:pointer;margin-top:4px;">
+        <div class="tribal-btn" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="fs-expand" d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z" fill="#e8dcc8"/>
+          </svg>
+        </div>
+        <span class="act-label">FULL</span>
+      </div>
 
     </div>`;
 
@@ -837,8 +842,11 @@ function buildReel(v) {
       if (e.isIntersecting) {
         vid.muted = true;
         vid.play().then(() => {
-          if (_audioUnlocked && !_isMuted) { vid.muted = false; }
-        }).catch(()=>{});
+          // Auto-unmute: browsers allow unmuting after play() resolves
+          vid.muted = false;
+          window._audioUnlocked = true;
+          _audioUnlocked = true;
+        }).catch(()=>{ vid.muted=true; });
         _currentVideoId = e.target.dataset.id;
         updateMuteUI();
       } else {
