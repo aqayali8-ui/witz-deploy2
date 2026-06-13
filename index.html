@@ -433,17 +433,15 @@ let _audioUnlocked = false;
 function unlockAudio() {
   if (_audioUnlocked) return;
   _audioUnlocked = true;
-  // Unmute the currently playing video immediately
+  // Unmute all playing videos immediately
   document.querySelectorAll('video').forEach(v => {
-    if (!v.paused) { v.muted = false; }
+    if (!v.paused && !_isMuted) {
+      v.muted = false;
+    }
   });
-  // Remove listeners once unlocked
-  ['touchstart','touchend','click','keydown','scroll'].forEach(ev =>
-    document.removeEventListener(ev, unlockAudio)
-  );
 }
-// Attach unlock to any first user interaction
-['touchstart','touchend','click','keydown','scroll'].forEach(ev =>
+// Unlock on ANY first interaction — touch, click, scroll, keydown
+['touchstart','click','keydown','wheel'].forEach(ev =>
   document.addEventListener(ev, unlockAudio, {once:true, passive:true})
 );
 function expandReel(btn) {
@@ -794,13 +792,22 @@ function buildReel(v) {
     </div>`;
 
   loadCounts(v.id);
+  const col = document.getElementById('reel-col');
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
-      if (e.isIntersecting) { vid.muted = _audioUnlocked ? _isMuted : true; vid.play().catch(()=>{}); if(!_audioUnlocked){ vid.muted=true; } _currentVideoId = e.target.dataset.id; updateMuteUI(); }
-      else vid.pause();
+      if (e.isIntersecting) {
+        vid.muted = true;
+        vid.play().then(() => {
+          if (_audioUnlocked && !_isMuted) { vid.muted = false; }
+        }).catch(()=>{});
+        _currentVideoId = e.target.dataset.id;
+        updateMuteUI();
+      } else {
+        vid.pause();
+      }
     });
-  }, { threshold: 0.6 });
+  }, { threshold: 0.5, root: col });
   obs.observe(div);
   return div;
 }
