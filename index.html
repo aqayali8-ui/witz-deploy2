@@ -882,6 +882,48 @@ function fileSelected(inp) {
   vid.src = url;
 }
 
+async function uploadToR2(file, path) {
+  const R2_ACCOUNT_ID = '6a5f7639d48ba8ad6d1c1ad7ca5935d3';
+  const R2_ACCESS_KEY = 'd8c4ac7aa8cf9f297130ba2056a2f972';
+  const R2_SECRET_KEY = '55eede051388af8278a3c041f85eb42ff7d40f7d1338f7b827d9f2d12d7e2b04';
+  const R2_BUCKET = 'witz-videos';
+  const R2_PUBLIC_URL = 'https://pub-e4943bef6bdc40dda26ea30887505830.r2.dev';
+  const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  const url = `${endpoint}/${R2_BUCKET}/${path}`;
+  const now = new Date();
+  const dateStr = now.toISOString().replace(/[:\-]|\\.\d{3}/g,'').slice(0,15)+'Z';
+  const dateOnly = dateStr.slice(0,8);
+  async function hmacSign(key, data) {
+    const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+    const ck = await crypto.subtle.importKey('raw', k, {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+    return new Uint8Array(await crypto.subtle.sign('HMAC', ck, new TextEncoder().encode(data)));
+  }
+  function hex(buf) { return Array.from(buf).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+  async function sha256hex(buf) { return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))); }
+  const fileBuffer = await file.arrayBuffer();
+  const payloadHash = await sha256hex(fileBuffer.slice(0));
+  const region = 'auto';
+  const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  const canonicalHeaders = `content-type:${file.type}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${dateStr}\n`;
+  const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+  const canonicalRequest = ['PUT', `/${R2_BUCKET}/${path}`, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const credentialScope = `${dateOnly}/${region}/s3/aws4_request`;
+  const strToSign = `AWS4-HMAC-SHA256\n${dateStr}\n${credentialScope}\n${await sha256hex(new TextEncoder().encode(canonicalRequest))}`;
+  const k1 = await hmacSign('AWS4'+R2_SECRET_KEY, dateOnly);
+  const k2 = await hmacSign(k1, region);
+  const k3 = await hmacSign(k2, 's3');
+  const k4 = await hmacSign(k3, 'aws4_request');
+  const signature = hex(await hmacSign(k4, strToSign));
+  const authorization = `AWS4-HMAC-SHA256 Credential=${R2_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type, 'x-amz-date': dateStr, 'x-amz-content-sha256': payloadHash, 'Authorization': authorization },
+    body: fileBuffer
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`R2 ${res.status}: ${t}`); }
+  return `${R2_PUBLIC_URL}/${path}`;
+}
+
 async function submitUpload() {
   const sb = getSB(); if (!sb) return;
   if (!_user) { toast('Sign in first'); return; }
@@ -894,13 +936,11 @@ async function submitUpload() {
   const ext = (file.name?.split('.').pop() || 'mp4');
   const path = _user.id + '/' + Date.now() + '.' + ext;
   try {
-    const { error: upErr } = await sb.storage.from('videos').upload(path, file, { cacheControl:'3600', upsert:false });
-    if (upErr) { toast('Upload failed: ' + upErr.message); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } return; }
-    const { data: { publicUrl } } = sb.storage.from('videos').getPublicUrl(path);
+    const publicUrl = await uploadToR2(file, path);
     const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
     await sb.from('videos').insert({ user_id:_user.id, url:publicUrl, caption:cap, media_type:mediaType });
     closeUpload(); toast('🔥 Posted!'); loadFeed();
-  } catch(e) { toast('Upload error'); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } }
+  } catch(e) { toast('Upload error: ' + e.message); if (btn) { btn.disabled=false; btn.textContent='CARVE YOUR MARK'; } }
 }
 
 // ═══════════════════════════════════════════════════════
