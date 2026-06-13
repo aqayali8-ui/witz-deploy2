@@ -725,6 +725,11 @@ async function loadFeed() {
   }
   wrap.innerHTML = '';
   videos.forEach(v => wrap.appendChild(buildReel(v)));
+  // Force-play first video — observer may not fire on initial load
+  setTimeout(() => {
+    const firstVid = wrap.querySelector('video');
+    if (firstVid && firstVid.paused) { firstVid.muted=true; firstVid.play().catch(()=>{}); }
+  }, 400);
 }
 
 function buildReel(v) {
@@ -792,7 +797,6 @@ function buildReel(v) {
     </div>`;
 
   loadCounts(v.id);
-  const col = document.getElementById('reel-col');
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
@@ -807,7 +811,7 @@ function buildReel(v) {
         vid.pause();
       }
     });
-  }, { threshold: 0.5, root: col });
+  }, { threshold: 0.5 });
   obs.observe(div);
   return div;
 }
