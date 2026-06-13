@@ -76,7 +76,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 #nav-search-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;}
 #reel-wrap{flex:1;}
 #reel-center{display:flex;justify-content:center;height:calc(100vh - 48px);}
-#reel-col{width:100%;max-width:420px;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-snap-stop:always;overscroll-behavior-y:contain;scroll-behavior:smooth;scrollbar-width:none;padding-bottom:60px;box-sizing:border-box;}
+#reel-col{width:100%;max-width:420px;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-snap-stop:always;overscroll-behavior-y:contain;scroll-behavior:smooth;scrollbar-width:none;padding:0!important;margin:0;}
 #reel-col::-webkit-scrollbar{display:none;}
 @media(max-width:500px){#reel-center{display:block;}#reel-col{max-width:100%;}}
 #reel-wrap::-webkit-scrollbar{display:none;}
@@ -809,7 +809,7 @@ function buildReel(v) {
         <span class="act-label" id="rl-cc-${v.id}">0</span>
       </div>
       <div class="act-col" onclick="doShare('${v.id}')" style="cursor:pointer;">
-        <div class="tribal-btn">
+        <div class="tribal-btn" style="overflow:visible;">
           <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
             <circle cx="43" cy="43" r="40" fill="#0d0d20" stroke="#1a3a8f" stroke-width="1.2"/>
             <path d="M43 20 C55 20 64 30 64 43 C64 56 55 65 43 65 C37 65 32 62 28 57" fill="none" stroke="#8b0000" stroke-width="2.8" stroke-linecap="round"/>
