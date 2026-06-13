@@ -367,35 +367,41 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 </div>
 
 <!-- ══ UPLOAD PANEL ══ -->
-<div id="upload-panel">
-  <div class="panel-header">
-    <span class="panel-title">POST A REEL</span>
-    <button class="panel-close" onclick="closeUpload()">✕</button>
-  </div>
-  <!-- Tab switcher: Upload vs Record -->
-  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid #0f1e30;margin-bottom:14px;">
-    <button id="tab-upload" onclick="switchUploadTab('upload')" style="flex:1;padding:10px;background:var(--royal);border:none;color:#fff;font-family:'Barlow Condensed';font-size:14px;letter-spacing:2px;cursor:pointer;">📁 UPLOAD</button>
-    <button id="tab-record" onclick="switchUploadTab('record')" style="flex:1;padding:10px;background:#0a1230;border:none;color:#3a5a7c;font-family:'Barlow Condensed';font-size:14px;letter-spacing:2px;cursor:pointer;">🔴 RECORD</button>
-  </div>
-
-  <!-- Upload zone -->
-  <div id="zone-upload">
-    <div class="upload-zone" onclick="document.getElementById('file-pick').click()">
-      <div class="upload-zone-icon" id="upload-icon">🎬</div>
-      <div class="upload-zone-txt">TAP TO SELECT VIDEO OR IMAGE</div>
-      <div class="upload-zone-sub" id="upload-file-name">MP4, MOV up to 3 min · JPG, PNG images</div>
-      <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this)">
+<div id="upload-panel" style="padding:0;background:#000;">
+  <!-- Camera view takes full screen -->
+  <div id="zone-record" style="position:relative;width:100%;height:100%;background:#000;">
+    <video id="cam-preview" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+    <!-- Top bar -->
+    <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:16px;z-index:5;background:linear-gradient(to bottom,rgba(0,0,0,0.5),transparent);">
+      <button onclick="closeUpload()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px;">✕</button>
+      <div id="rec-timer" style="font-family:'Bebas Neue';font-size:22px;color:#ff3333;letter-spacing:3px;display:none;">0:00</div>
+      <button onclick="document.getElementById('file-pick').click()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;padding:6px 12px;border-radius:20px;cursor:pointer;">UPLOAD</button>
+      <input type="file" id="file-pick" accept="video/*,image/*" style="display:none" onchange="fileSelected(this);switchUploadTab('caption')">
+    </div>
+    <!-- Record button -->
+    <div style="position:absolute;bottom:100px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;">
+      <div id="btn-start-rec" onclick="startRecording()" style="width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <div style="width:52px;height:52px;border-radius:50%;background:#cc2222;"></div>
+      </div>
+      <span style="color:#fff;font-family:'Barlow Condensed';font-size:11px;letter-spacing:2px;opacity:0.7;">HOLD OR TAP</span>
+    </div>
+    <!-- Stop button (hidden until recording) -->
+    <div id="btn-stop-rec" onclick="stopRecording()" style="display:none;position:absolute;bottom:100px;left:50%;transform:translateX(-50%);width:72px;height:72px;border-radius:12px;border:4px solid #fff;background:transparent;cursor:pointer;align-items:center;justify-content:center;">
+      <div style="width:28px;height:28px;border-radius:4px;background:#fff;"></div>
     </div>
   </div>
 
-  <!-- Record zone -->
-  <div id="zone-record" style="display:none;">
-    <video id="cam-preview" autoplay muted playsinline style="width:100%;border-radius:12px;background:#000;max-height:280px;object-fit:cover;margin-bottom:12px;"></video>
-    <div style="display:flex;gap:10px;margin-bottom:12px;">
-      <button id="btn-start-rec" onclick="startRecording()" style="flex:1;padding:12px;background:#8b0000;border:none;border-radius:10px;color:#fff;font-family:'Barlow Condensed';font-size:16px;letter-spacing:2px;cursor:pointer;">⬤ START</button>
-      <button id="btn-stop-rec" onclick="stopRecording()" style="flex:1;padding:12px;background:#0a1230;border:1px solid #1a3a8f;border-radius:10px;color:#3a5a7c;font-family:'Barlow Condensed';font-size:16px;letter-spacing:2px;cursor:pointer;" disabled>■ STOP</button>
+  <!-- Caption screen (shown after recording/upload) -->
+  <div id="zone-caption" style="display:none;flex-direction:column;height:100%;padding:20px;background:#060b20;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <button onclick="switchUploadTab('record')" style="background:none;border:none;color:#4da6ff;font-family:'Barlow Condensed';font-size:14px;letter-spacing:1px;cursor:pointer;">← BACK</button>
+      <span style="font-family:'Bebas Neue';font-size:18px;letter-spacing:3px;color:#fff;">NEW REEL</span>
+      <div style="width:60px;"></div>
     </div>
-    <div id="rec-timer" style="text-align:center;font-family:'Bebas Neue';font-size:24px;color:#cc2222;letter-spacing:3px;display:none;">0:00</div>
+    <div id="preview-thumb" style="width:100%;border-radius:10px;overflow:hidden;background:#000;margin-bottom:16px;max-height:200px;"></div>
+    <div style="font-family:'Barlow Condensed';font-size:11px;letter-spacing:2px;color:#3a5a7c;margin-bottom:6px;">CAPTION</div>
+    <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..." style="margin-bottom:16px;"></textarea>
+    <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
   </div>
   <textarea class="upload-caption" id="upload-caption" placeholder="Write your caption..."></textarea>
   <button class="btn-upload" onclick="submitUpload()">CARVE YOUR MARK</button>
@@ -707,7 +713,8 @@ function enterApp() {
   if (pn) pn.textContent = _username;
   if (ph) ph.textContent = '@' + _username.toLowerCase();
   if (_user?.email === ADMIN) {
-    const ab = document.getElementById('btn-admin'); if (ab) ab.style.display='block';
+    const lock = document.getElementById('admin-lock');
+    if (lock) { lock.style.display='block'; lock.style.opacity='0.15'; }
   }
   showScreen('app');
   loadFeed();
@@ -933,8 +940,15 @@ async function postComment() {
 // UPLOAD
 // ═══════════════════════════════════════════════════════
 function openUpload() {
-  if (!_user) { showSignInBanner('Sign in to post reels'); return; }
+  if (!_user) {
+    // Send guest straight to sign-in/sign-up
+    document.getElementById('main-screen')?.classList.remove('active');
+    document.getElementById('auth')?.classList.add('active');
+    return;
+  }
+  // Open camera immediately, show upload panel in record mode
   document.getElementById('upload-panel')?.classList.add('open');
+  switchUploadTab('record');
 }
 // ═══ CAMERA RECORDING ═══
 let _mediaRecorder = null;
@@ -944,14 +958,17 @@ let _recSeconds = 0;
 let _camStream = null;
 
 function switchUploadTab(tab) {
-  const isUpload = tab === 'upload';
-  document.getElementById('zone-upload').style.display = isUpload ? '' : 'none';
-  document.getElementById('zone-record').style.display = isUpload ? 'none' : '';
-  document.getElementById('tab-upload').style.background = isUpload ? 'var(--royal)' : '#0a1230';
-  document.getElementById('tab-upload').style.color = isUpload ? '#fff' : '#3a5a7c';
-  document.getElementById('tab-record').style.background = isUpload ? '#0a1230' : 'var(--royal)';
-  document.getElementById('tab-record').style.color = isUpload ? '#3a5a7c' : '#fff';
-  if (!isUpload) startCamera();
+  const zRec = document.getElementById('zone-record');
+  const zCap = document.getElementById('zone-caption');
+  if (tab === 'record') {
+    if (zRec) zRec.style.display = '';
+    if (zCap) { zCap.style.display='none'; zCap.style.flexDirection=''; }
+    startCamera();
+  } else if (tab === 'caption') {
+    if (zRec) zRec.style.display = 'none';
+    if (zCap) { zCap.style.display='flex'; zCap.style.flexDirection='column'; }
+    stopCamera();
+  }
 }
 
 async function startCamera() {
@@ -970,21 +987,23 @@ function startRecording() {
   _mediaRecorder.onstop = () => {
     const blob = new Blob(_recChunks, { type: 'video/mp4' });
     const file = new File([blob], 'recording_' + Date.now() + '.mp4', { type: 'video/mp4' });
-    // Inject into file-pick as if user selected it
     const dt = new DataTransfer();
     dt.items.add(file);
     const fp = document.getElementById('file-pick');
     if (fp) { fp.files = dt.files; fileSelected(fp); }
-    switchUploadTab('upload');
-    stopCamera();
+    // Show preview thumbnail
+    const thumb = document.getElementById('preview-thumb');
+    if (thumb) {
+      const url = URL.createObjectURL(blob);
+      thumb.innerHTML = `<video src="${url}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;" controls muted></video>`;
+    }
+    switchUploadTab('caption');
   };
   _mediaRecorder.start();
   _recSeconds = 0;
   document.getElementById('rec-timer').style.display = '';
-  document.getElementById('btn-start-rec').disabled = true;
-  document.getElementById('btn-start-rec').style.opacity = '0.5';
-  document.getElementById('btn-stop-rec').disabled = false;
-  document.getElementById('btn-stop-rec').style.color = '#fff';
+  document.getElementById('btn-start-rec').style.display = 'none';
+  document.getElementById('btn-stop-rec').style.display = 'flex';
   _recTimer = setInterval(() => {
     _recSeconds++;
     const m = Math.floor(_recSeconds/60);
@@ -998,9 +1017,8 @@ function stopRecording() {
   if (_mediaRecorder && _mediaRecorder.state !== 'inactive') _mediaRecorder.stop();
   clearInterval(_recTimer);
   document.getElementById('rec-timer').style.display = 'none';
-  document.getElementById('btn-start-rec').disabled = false;
-  document.getElementById('btn-start-rec').style.opacity = '1';
-  document.getElementById('btn-stop-rec').disabled = true;
+  document.getElementById('btn-start-rec').style.display = 'flex';
+  document.getElementById('btn-stop-rec').style.display = 'none';
 }
 
 function stopCamera() {
@@ -1362,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 <!-- ═══ HIDDEN ADMIN LOCK ICON ═══ -->
-<div id="admin-lock" onclick="showAdminModal()" style="position:fixed;bottom:80px;right:10px;width:22px;height:22px;cursor:pointer;z-index:15;opacity:0.15;transition:opacity 0.3s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='0.15'">
+<div id="admin-lock" onclick="showAdminModal()" style="position:fixed;bottom:80px;right:10px;width:22px;height:22px;cursor:pointer;z-index:15;opacity:0;display:none;transition:opacity 0.3s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='0.15'">
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="3" y="11" width="18" height="11" rx="2" fill="#4da6ff" opacity="0.8"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#4da6ff" stroke-width="2" stroke-linecap="round"/>
