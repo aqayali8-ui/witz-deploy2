@@ -332,7 +332,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <button class="signin-banner-btn" onclick="goSignUp()">JOIN WITZ</button>
   </div>
   <!-- admin btn hidden unless owner -->
-  <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:50px;right:12px;background:#8b0000;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed';font-size:12px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
+  <button id="btn-admin" onclick="openAdmin()" style="display:none;position:fixed;top:14px;right:12px;background:#8b0000;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-family:'Barlow Condensed';font-size:11px;letter-spacing:1px;cursor:pointer;z-index:20;">ADMIN</button>
 </div>
 
 <!-- ══ SEARCH PANEL ══ -->
@@ -424,6 +424,20 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 const SURL = 'https://mimwbeexqskhefistbvt.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
 const ADMIN = 'aqayali8@gmail.com';
+let _isMuted = false;
+function toggleMute() {
+  _isMuted = !_isMuted;
+  document.querySelectorAll('video').forEach(v => v.muted = _isMuted);
+  updateMuteUI();
+}
+function updateMuteUI() {
+  document.querySelectorAll('[id^="sound-waves-"]').forEach(el => {
+    el.style.display = _isMuted ? 'none' : '';
+  });
+  document.querySelectorAll('[id^="mute-lbl-"]').forEach(el => {
+    el.textContent = _isMuted ? 'MUTED' : 'SOUND';
+  });
+}
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -725,13 +739,25 @@ function buildReel(v) {
         </div>
         <span class="act-label">SHARE</span>
       </div>
+      <div class="act-col" onclick="toggleMute()" style="cursor:pointer;">
+        <div class="tribal-btn" id="mute-btn-${v.id}">
+          <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
+            <circle cx="43" cy="43" r="32" fill="none" stroke="#8b0000" stroke-width="5.5"/>
+            <circle cx="43" cy="43" r="27" fill="#0f2255"/>
+            <polygon points="28,35 28,51 36,51 46,60 46,26 36,35" fill="#fff"/>
+            <path id="sound-waves-${v.id}" d="M52,33 Q60,43 52,53 M57,28 Q68,43 57,58" fill="none" stroke="#4da6ff" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="act-label" id="mute-lbl-${v.id}">SOUND</span>
+      </div>
     </div>`;
 
   loadCounts(v.id);
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
-      if (e.isIntersecting) { vid.muted=true; vid.play().catch(()=>{}); _currentVideoId = e.target.dataset.id; }
+      if (e.isIntersecting) { vid.muted=_isMuted; vid.play().catch(()=>{}); _currentVideoId = e.target.dataset.id; updateMuteUI(); }
       else vid.pause();
     });
   }, { threshold: 0.6 });
