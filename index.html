@@ -425,18 +425,19 @@ const SURL = 'https://mimwbeexqskhefistbvt.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
 const ADMIN = 'aqayali8@gmail.com';
 let _isMuted = false;
+function tapVideo(vid) {
+  if (vid.paused) { vid.play().catch(()=>{}); } else { vid.pause(); }
+}
 function toggleMute() {
   _isMuted = !_isMuted;
   document.querySelectorAll('video').forEach(v => v.muted = _isMuted);
   updateMuteUI();
 }
 function updateMuteUI() {
-  document.querySelectorAll('[id^="sound-waves-"]').forEach(el => {
-    el.style.display = _isMuted ? 'none' : '';
-  });
-  document.querySelectorAll('[id^="mute-lbl-"]').forEach(el => {
-    el.textContent = _isMuted ? 'MUTED' : 'SOUND';
-  });
+  const waves = document.getElementById('speaker-waves');
+  const muteLine = document.getElementById('speaker-mute-line');
+  if (waves) waves.style.display = _isMuted ? 'none' : '';
+  if (muteLine) muteLine.style.display = _isMuted ? '' : 'none';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -687,7 +688,7 @@ function buildReel(v) {
   div.innerHTML = `
     ${v.media_type === 'image'
       ? `<img src="${v.url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">`
-      : `<video src="${v.url}" loop playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>`
+      : `<video src="${v.url}" loop playsinline preload="metadata" onclick="tapVideo(this)" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer;"></video>`
     }
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
     <div style="position:absolute;bottom:72px;left:14px;right:70px;z-index:5;">
@@ -739,25 +740,14 @@ function buildReel(v) {
         </div>
         <span class="act-label">SHARE</span>
       </div>
-      <div class="act-col" onclick="toggleMute()" style="cursor:pointer;">
-        <div class="tribal-btn" id="mute-btn-${v.id}">
-          <svg width="54" height="54" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="40" fill="#1a3a8f" stroke="#0d2060" stroke-width="2"/>
-            <circle cx="43" cy="43" r="32" fill="none" stroke="#8b0000" stroke-width="5.5"/>
-            <circle cx="43" cy="43" r="27" fill="#0f2255"/>
-            <polygon points="28,35 28,51 36,51 46,60 46,26 36,35" fill="#fff"/>
-            <path id="sound-waves-${v.id}" d="M52,33 Q60,43 52,53 M57,28 Q68,43 57,58" fill="none" stroke="#4da6ff" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <span class="act-label" id="mute-lbl-${v.id}">SOUND</span>
-      </div>
+
     </div>`;
 
   loadCounts(v.id);
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
-      if (e.isIntersecting) { vid.muted=_isMuted; vid.play().catch(()=>{}); _currentVideoId = e.target.dataset.id; updateMuteUI(); }
+      if (e.isIntersecting) { vid.muted=_isMuted; vid.play().catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); }); _currentVideoId = e.target.dataset.id; updateMuteUI(); }
       else vid.pause();
     });
   }, { threshold: 0.6 });
@@ -1188,6 +1178,15 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
   </div>
+
+<!-- ═══ HIDDEN SPEAKER ICON TOP RIGHT ═══ -->
+<div id="speaker-icon" onclick="toggleMute()" style="position:fixed;top:12px;right:12px;width:24px;height:24px;cursor:pointer;z-index:25;opacity:0;transition:opacity 0.3s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='0'" ontouchstart="this.style.opacity='0.7'" ontouchend="setTimeout(()=>this.style.opacity='0',800)">
+  <svg id="speaker-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="3,9 3,15 7,15 13,20 13,4 7,9" fill="#e8dcc8"/>
+    <path id="speaker-waves" d="M16,9.5 Q19,12 16,14.5 M18,7 Q22,12 18,17" fill="none" stroke="#e8dcc8" stroke-width="1.5" stroke-linecap="round"/>
+    <path id="speaker-mute-line" d="M16,9 L21,15 M21,9 L16,15" stroke="#cc2222" stroke-width="1.8" stroke-linecap="round" style="display:none"/>
+  </svg>
+</div>
 
 <!-- ═══ HIDDEN ADMIN LOCK ICON ═══ -->
 <div id="admin-lock" onclick="showAdminModal()" style="position:fixed;bottom:80px;right:10px;width:22px;height:22px;cursor:pointer;z-index:15;opacity:0.15;transition:opacity 0.3s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='0.15'">
