@@ -429,6 +429,23 @@ const SURL = 'https://mimwbeexqskhefistbvt.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbXdiZWV4cXNraGVmaXN0YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDI0OTAsImV4cCI6MjA5MjcxODQ5MH0.oT-3LXBK1pCddKId77MR-QA4_FbYYTQsadVAXi8wNkg';
 const ADMIN = 'aqayali8@gmail.com';
 let _isMuted = false;
+let _audioUnlocked = false;
+function unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  // Unmute the currently playing video immediately
+  document.querySelectorAll('video').forEach(v => {
+    if (!v.paused) { v.muted = false; }
+  });
+  // Remove listeners once unlocked
+  ['touchstart','touchend','click','keydown','scroll'].forEach(ev =>
+    document.removeEventListener(ev, unlockAudio)
+  );
+}
+// Attach unlock to any first user interaction
+['touchstart','touchend','click','keydown','scroll'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, {once:true, passive:true})
+);
 function expandReel(btn) {
   const reel = btn.closest('.real-reel');
   const col = document.getElementById('reel-col') || document.getElementById('reel-wrap');
@@ -780,7 +797,7 @@ function buildReel(v) {
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
-      if (e.isIntersecting) { vid.muted=_isMuted; vid.play().catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); }); _currentVideoId = e.target.dataset.id; updateMuteUI(); }
+      if (e.isIntersecting) { vid.muted = _audioUnlocked ? _isMuted : true; vid.play().catch(()=>{}); if(!_audioUnlocked){ vid.muted=true; } _currentVideoId = e.target.dataset.id; updateMuteUI(); }
       else vid.pause();
     });
   }, { threshold: 0.6 });
