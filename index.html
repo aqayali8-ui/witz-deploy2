@@ -355,12 +355,27 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
     <span class="panel-title">PROFILE</span>
     <button class="panel-close" onclick="closeProfile()">✕</button>
   </div>
-  <div class="profile-av-lg" id="profile-av">WZ</div>
+  <!-- Avatar with tap-to-change -->
+  <div style="position:relative;display:inline-block;margin-bottom:8px;cursor:pointer;" onclick="document.getElementById('avatar-pick').click()">
+    <div class="profile-av-lg" id="profile-av" style="overflow:hidden;">WZ</div>
+    <div style="position:absolute;bottom:0;right:0;background:#1a3a8f;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:2px solid #060b20;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+    <input type="file" id="avatar-pick" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+  </div>
   <div id="profile-name">WARRIOR</div>
   <div id="profile-handle">@warrior</div>
   <div class="pstats">
     <div class="pstat"><div class="pstat-num" id="pstat-reels">0</div><div class="pstat-lbl">REELS</div></div>
     <div class="pstat"><div class="pstat-num" id="pstat-likes">0</div><div class="pstat-lbl">STAMPS</div></div>
+    <div class="pstat"><div class="pstat-num" id="pstat-followers">0</div><div class="pstat-lbl">FOLLOWERS</div></div>
+    <div class="pstat"><div class="pstat-num" id="pstat-following">0</div><div class="pstat-lbl">FOLLOWING</div></div>
+  </div>
+  <div id="follow-btn-wrap" style="display:none;margin:8px 0;">
+    <button id="follow-btn" onclick="toggleFollow()" style="padding:8px 28px;border-radius:20px;border:1.5px solid #4da6ff;background:transparent;color:#4da6ff;font-family:'Barlow Condensed';font-size:14px;letter-spacing:2px;cursor:pointer;">FOLLOW</button>
+  </div>
+  <div id="dm-btn-wrap" style="display:none;margin:4px 0;">
+    <button id="dm-profile-btn" onclick="" style="padding:6px 20px;border-radius:20px;border:1px solid #1a3a8f;background:transparent;color:#3a5a7c;font-family:'Barlow Condensed';font-size:12px;letter-spacing:2px;cursor:pointer;">MESSAGE</button>
   </div>
   <div class="profile-grid" id="profile-grid"></div>
   <button class="btn-logout" onclick="logout()">SIGN OUT</button>
@@ -414,19 +429,30 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
       <span class="panel-title">INBOX</span>
       <button class="panel-close" onclick="closeInbox()">✕</button>
     </div>
-    <div id="inbox-list" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;gap:12px;">
-      <div style="font-size:40px;">💬</div>
-      <div>MESSAGES COMING SOON</div>
+    <div id="inbox-list" style="flex:1;overflow-y:auto;"></div>
+    <!-- DM Compose bar -->
+    <div id="dm-compose" style="display:none;padding:12px 0 0;">
+      <div style="font-family:'Barlow Condensed';font-size:11px;letter-spacing:2px;color:#3a5a7c;margin-bottom:6px;" id="dm-to-label">TO: @username</div>
+      <div style="display:flex;gap:8px;">
+        <input id="dm-input" placeholder="Write a message..." style="flex:1;background:#0a1628;border:1px solid #1a3a5a;border-radius:20px;color:#e8dcc8;padding:10px 14px;font-size:13px;outline:none;">
+        <button onclick="sendDM()" style="background:#1a3a8f;border:none;color:#fff;border-radius:20px;padding:10px 16px;cursor:pointer;font-family:'Barlow Condensed';font-size:13px;letter-spacing:1px;">SEND</button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ══ ADMIN PANEL ══ -->
 <div id="admin-panel">
-  <div style="padding:20px;display:flex;flex-direction:column;height:100%;">
-    <div class="panel-header">
+  <div style="padding:16px 20px 0;display:flex;flex-direction:column;height:100%;">
+    <div class="panel-header" style="margin-bottom:12px;">
       <span class="panel-title">ADMIN</span>
       <button class="panel-close" onclick="closeAdmin()">✕</button>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid #0f1e30;margin-bottom:14px;">
+      <button id="atab-videos" onclick="adminTab('videos')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid #4da6ff;color:#fff;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;cursor:pointer;">VIDEOS</button>
+      <button id="atab-users" onclick="adminTab('users')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;cursor:pointer;">USERS</button>
+      <button id="atab-banned" onclick="adminTab('banned')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;color:#3a5a7c;font-family:'Barlow Condensed';font-size:13px;letter-spacing:2px;cursor:pointer;">BANNED</button>
     </div>
     <div id="admin-list" style="flex:1;overflow-y:auto;"></div>
   </div>
@@ -787,9 +813,9 @@ function buildReel(v) {
     }
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 45%);pointer-events:none;"></div>
     <div style="position:absolute;bottom:20px;left:14px;right:70px;z-index:5;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;" onclick="viewUserProfile('${v.user_id}','${uname}')">
         <div class="reel-av">${init}</div>
-        <span class="reel-uname">${uname}</span>
+        <span class="reel-uname">@${uname}</span>
       </div>
       <div class="reel-cap">${v.caption || ''}</div>
     </div>
@@ -1161,6 +1187,25 @@ async function submitUpload() {
 // ═══════════════════════════════════════════════════════
 // PROFILE
 // ═══════════════════════════════════════════════════════
+async function uploadAvatar(inp) {
+  const file = inp?.files?.[0]; if (!file) return;
+  const sb = getSB(); if (!sb || !_user) return;
+  toast('Uploading avatar...');
+  try {
+    const ext = file.name.split('.').pop();
+    const path = _user.id + '/avatar.' + ext;
+    const publicUrl = await uploadToR2(file, path);
+    await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', _user.id);
+    // Update UI
+    const av = document.getElementById('profile-av');
+    if (av) { av.innerHTML = `<img src="${publicUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`; }
+    // Update nav avatar too
+    const navAv = document.querySelector('#nav-profile .nav-av');
+    if (navAv) navAv.style.backgroundImage = `url(${publicUrl})`;
+    toast('Avatar updated!');
+  } catch(e) { toast('Avatar upload failed'); }
+}
+
 function openProfile() {
   document.getElementById('profile-panel')?.classList.add('open');
   if (_user) loadProfileVideos();
@@ -1247,37 +1292,211 @@ function closeSearch() { document.getElementById('search-panel')?.classList.remo
 // ═══════════════════════════════════════════════════════
 // INBOX
 // ═══════════════════════════════════════════════════════
-function openInbox() { const p=document.getElementById('inbox-panel'); if(p) p.style.display='flex'; }
-function closeInbox() { const p=document.getElementById('inbox-panel'); if(p) p.style.display='none'; }
+let _dmThread = null;
+function openInbox() {
+  const p=document.getElementById('inbox-panel'); if(p) p.style.display='flex';
+  loadInbox();
+}
+function closeInbox() { const p=document.getElementById('inbox-panel'); if(p) p.style.display='none'; _dmThread=null; document.getElementById('dm-compose').style.display='none'; }
+async function loadInbox() {
+  const sb=getSB(); const list=document.getElementById('inbox-list'); if(!list||!_user) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+  try {
+    const { data } = await sb.from('messages').select('*,sender:profiles!messages_sender_id_fkey(username,avatar_url),receiver:profiles!messages_receiver_id_fkey(username,avatar_url)').or(`sender_id.eq.${_user.id},receiver_id.eq.${_user.id}`).order('created_at',{ascending:false});
+    if (!data?.length) { list.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:#3a5a7c;font-family:Barlow Condensed;font-size:13px;letter-spacing:2px;gap:12px;"><div style="font-size:40px;">💬</div><div>NO MESSAGES YET</div></div>'; return; }
+    const threads = {};
+    data.forEach(m => {
+      const partner = m.sender_id===_user.id ? m.receiver : m.sender;
+      const pid = m.sender_id===_user.id ? m.receiver_id : m.sender_id;
+      if (!threads[pid]) threads[pid]={partner,last:m};
+    });
+    list.innerHTML='';
+    Object.entries(threads).forEach(([pid,t]) => {
+      const uname = t.partner?.username||'unknown';
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #0f1e30;cursor:pointer;';
+      row.onclick=()=>openDMThread(pid,uname);
+      const av = t.partner?.avatar_url ? `<img src="${t.partner.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` : `<div style="width:44px;height:44px;border-radius:50%;background:#1a3a8f;display:flex;align-items:center;justify-content:center;color:#fff;font-family:Bebas Neue;font-size:20px;">${uname[0].toUpperCase()}</div>`;
+      row.innerHTML=`${av}<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#e8dcc8;font-family:Barlow Condensed;letter-spacing:1px;">@${uname}</div><div style="font-size:12px;color:#3a5a7c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.last.body||''}</div></div>`;
+      list.appendChild(row);
+    });
+  } catch(e) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">Could not load messages</div>'; }
+}
+async function openDMThread(partnerId,partnerName) {
+  _dmThread=partnerId;
+  const sb=getSB(); const list=document.getElementById('inbox-list'); if(!list) return;
+  document.getElementById('dm-compose').style.display='block';
+  document.getElementById('dm-to-label').textContent='TO: @'+partnerName;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+  const {data}=await sb.from('messages').select('*').or(`and(sender_id.eq.${_user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${_user.id})`).order('created_at',{ascending:true});
+  list.innerHTML='';
+  (data||[]).forEach(m=>{
+    const mine=m.sender_id===_user.id;
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;justify-content:${mine?'flex-end':'flex-start'};margin:6px 0;`;
+    div.innerHTML=`<div style="max-width:70%;background:${mine?'#1a3a8f':'#0d1a2a'};border-radius:${mine?'14px 14px 2px 14px':'14px 14px 14px 2px'};padding:10px 14px;color:#e8dcc8;font-size:13px;">${m.body}</div>`;
+    list.appendChild(div);
+  });
+  list.scrollTop=list.scrollHeight;
+}
+async function sendDM() {
+  const sb=getSB(); if(!_dmThread||!_user) return;
+  const input=document.getElementById('dm-input');
+  const body=(input?.value||'').trim(); if(!body) return;
+  input.value='';
+  try { await sb.from('messages').insert({sender_id:_user.id,receiver_id:_dmThread,body}); openDMThread(_dmThread,document.getElementById('dm-to-label').textContent.replace('TO: @','')); } catch(e){toast('Could not send');}
+}
+async function startDM(userId,username) { openInbox(); setTimeout(()=>openDMThread(userId,username),300); }
 
 // ═══════════════════════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════════════════════
+let _adminTab = 'videos';
 function openAdmin() {
   if (!_user || _user.email !== ADMIN) { toast('Access denied'); return; }
   const p=document.getElementById('admin-panel'); if(p) p.style.display='flex';
-  adminLoad();
+  adminTab('videos');
 }
 function closeAdmin() { const p=document.getElementById('admin-panel'); if(p) p.style.display='none'; }
-async function adminLoad() {
+function adminTab(tab) {
+  _adminTab = tab;
+  ['videos','users','banned'].forEach(t => {
+    const btn = document.getElementById('atab-'+t);
+    if (btn) {
+      btn.style.borderBottomColor = t===tab ? '#4da6ff' : 'transparent';
+      btn.style.color = t===tab ? '#fff' : '#3a5a7c';
+    }
+  });
+  if (tab==='videos') adminLoadVideos();
+  else if (tab==='users') adminLoadUsers();
+  else if (tab==='banned') adminLoadBanned();
+}
+async function adminLoadVideos() {
   const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
   list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
   try {
-    const { data:vids } = await sb.from('videos').select('*,profiles(username)').order('created_at',{ ascending:false });
+    const { data:vids } = await sb.from('videos').select('*,profiles(username)').order('created_at',{ascending:false});
     if (!vids?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No videos</div>'; return; }
     list.innerHTML='';
     vids.forEach(v => {
       const row=document.createElement('div'); row.className='admin-row';
       const uname=v.profiles?.username||'unknown';
-      row.innerHTML=`<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;"><video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video></div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||''}</div></div><button onclick="adminDel('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">DEL</button>`;
+      const isImg = v.media_type==='image' || v.url?.match(/\.(png|jpg|jpeg|gif|webp)$/i);
+      const thumb = isImg
+        ? `<img src="${v.url}" style="width:100%;height:100%;object-fit:cover;">`
+        : `<video src="${v.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>`;
+      row.innerHTML=`<div style="width:44px;height:58px;background:#0d1a2a;border-radius:4px;overflow:hidden;flex-shrink:0;">${thumb}</div><div style="flex:1;min-width:0;"><div style="font-size:11px;color:#7a9cc6;">@${uname}</div><div style="font-size:12px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.caption||''}</div></div><button onclick="adminDel('${v.id}','${v.url}',this.closest('.admin-row'))" style="background:#8b0000;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">DEL</button>`;
       list.appendChild(row);
     });
-  } catch(e) {}
+  } catch(e) { console.error(e); }
+}
+async function adminLoadUsers() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+  try {
+    const { data:users } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+    if (!users?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No users</div>'; return; }
+    list.innerHTML='';
+    users.forEach(u => {
+      const row=document.createElement('div'); row.className='admin-row';
+      const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '';
+      const isBanned = u.banned;
+      row.innerHTML=`<div style="width:40px;height:40px;border-radius:50%;background:#1a3a8f;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Bebas Neue';font-size:18px;flex-shrink:0;">${(u.username||'?')[0].toUpperCase()}</div><div style="flex:1;min-width:0;"><div style="font-size:13px;color:#e8dcc8;">@${u.username||'unknown'}</div><div style="font-size:10px;color:#3a5a7c;">Joined ${joined}</div></div><button onclick="adminBanUser('${u.id}',${isBanned},this)" style="background:${isBanned?'#1a3a8f':'#8b0000'};border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">${isBanned?'UNBAN':'BAN'}</button>`;
+      list.appendChild(row);
+    });
+  } catch(e) { console.error(e); }
+}
+async function adminLoadBanned() {
+  const sb=getSB(); const list=document.getElementById('admin-list'); if(!list) return;
+  list.innerHTML='<div style="padding:16px;color:#3a5a7c;">LOADING...</div>';
+  try {
+    const { data:users } = await sb.from('profiles').select('*').eq('banned',true).order('created_at',{ascending:false});
+    if (!users?.length) { list.innerHTML='<div style="padding:20px;color:#3a5a7c;text-align:center;">No banned users</div>'; return; }
+    list.innerHTML='';
+    users.forEach(u => {
+      const row=document.createElement('div'); row.className='admin-row';
+      row.innerHTML=`<div style="width:40px;height:40px;border-radius:50%;background:#8b0000;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Bebas Neue';font-size:18px;flex-shrink:0;">${(u.username||'?')[0].toUpperCase()}</div><div style="flex:1;min-width:0;"><div style="font-size:13px;color:#e8dcc8;">@${u.username||'unknown'}</div><div style="font-size:10px;color:#cc2222;">BANNED</div></div><button onclick="adminBanUser('${u.id}',true,this)" style="background:#1a3a8f;border:none;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-family:'Barlow Condensed';font-size:12px;">UNBAN</button>`;
+      list.appendChild(row);
+    });
+  } catch(e) { console.error(e); }
+}
+async function adminBanUser(uid, isBanned, btn) {
+  const sb=getSB();
+  try {
+    await sb.from('profiles').update({banned: !isBanned}).eq('id', uid);
+    toast(isBanned ? 'User unbanned' : 'User banned');
+    adminTab(_adminTab);
+  } catch(e) { toast('Error'); }
 }
 async function adminDel(id,url,row) {
   if (!confirm('Delete permanently?')) return;
   const sb=getSB();
-  try { await sb.from('videos').delete().eq('id',id); try { const p=url.split('/videos/')[1]; if(p) await sb.storage.from('videos').remove([decodeURIComponent(p)]); } catch(e) {} row?.remove(); toast('Deleted'); loadFeed(); } catch(e) {}
+  try {
+    await sb.from('videos').delete().eq('id',id);
+    row?.remove(); toast('Deleted'); loadFeed();
+  } catch(e) {}
+}
+function adminLoad() { adminLoadVideos(); }
+
+
+// ═══ FOLLOW SYSTEM ═══
+let _viewingUserId = null;
+let _isFollowing = false;
+
+async function viewUserProfile(userId, username) {
+  _viewingUserId = userId;
+  openProfile();
+  const sb=getSB(); if(!sb) return;
+  const {data:p}=await sb.from('profiles').select('*').eq('id',userId).single();
+  if(!p) return;
+  document.getElementById('profile-name').textContent=(p.username||username).toUpperCase();
+  document.getElementById('profile-handle').textContent='@'+(p.username||username).toLowerCase();
+  if(p.avatar_url) document.getElementById('profile-av').innerHTML=`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  const isOwnProfile=_user?.id===userId;
+  document.getElementById('follow-btn-wrap').style.display=isOwnProfile?'none':'block';
+  document.getElementById('dm-btn-wrap').style.display=isOwnProfile?'none':'block';
+  document.getElementById('dm-profile-btn').onclick=()=>startDM(userId,username);
+  if(_user&&!isOwnProfile){
+    const {data:f}=await sb.from('follows').select('id').eq('follower_id',_user.id).eq('following_id',userId).maybeSingle();
+    _isFollowing=!!f; updateFollowBtn();
+  }
+  const {count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',userId);
+  const {count:fgc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',userId);
+  document.getElementById('pstat-followers').textContent=fc||0;
+  document.getElementById('pstat-following').textContent=fgc||0;
+  loadProfileGrid(userId);
+}
+
+function updateFollowBtn() {
+  const btn=document.getElementById('follow-btn'); if(!btn) return;
+  btn.textContent=_isFollowing?'FOLLOWING':'FOLLOW';
+  btn.style.background=_isFollowing?'#1a3a8f':'transparent';
+  btn.style.color=_isFollowing?'#fff':'#4da6ff';
+}
+
+async function toggleFollow() {
+  if(!_user||!_viewingUserId) return;
+  const sb=getSB();
+  try {
+    if(_isFollowing){ await sb.from('follows').delete().eq('follower_id',_user.id).eq('following_id',_viewingUserId); _isFollowing=false; }
+    else { await sb.from('follows').insert({follower_id:_user.id,following_id:_viewingUserId}); _isFollowing=true; }
+    updateFollowBtn();
+    const {count:fc}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',_viewingUserId);
+    document.getElementById('pstat-followers').textContent=fc||0;
+  } catch(e){toast('Error');}
+}
+
+async function loadFollowingFeed() {
+  const sb=getSB(); const wrap=document.getElementById('reel-col'); if(!wrap||!_user) return;
+  wrap.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#3a5a7c;font-size:12px;letter-spacing:2px;">LOADING...</div>';
+  const {data:follows}=await sb.from('follows').select('following_id').eq('follower_id',_user.id);
+  if(!follows?.length){wrap.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#3a5a7c;gap:12px;"><div style="font-size:40px;">👁</div><div style="font-family:Barlow Condensed;font-size:14px;letter-spacing:2px;">FOLLOW SOMEONE TO SEE THEIR REELS</div></div>';return;}
+  const ids=follows.map(f=>f.following_id);
+  const {data:vids}=await sb.from('videos').select('*,profiles(username,avatar_url)').in('user_id',ids).order('created_at',{ascending:false}).limit(30);
+  wrap.innerHTML='';
+  if(!vids?.length){wrap.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#3a5a7c;font-family:Barlow Condensed;font-size:13px;letter-spacing:2px;">NO REELS FROM PEOPLE YOU FOLLOW YET</div>';return;}
+  vids.forEach(v=>{const d=buildReel(v);wrap.appendChild(d);});
+  setTimeout(fixReelHeights,100);
 }
 
 // ═══════════════════════════════════════════════════════
