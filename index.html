@@ -86,7 +86,7 @@ canvas.star-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-even
 .reel-cap{font-size:13px;color:rgba(232,220,200,0.9);line-height:1.4;}
 .act-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .act-label{font-family:'Barlow Condensed';font-size:12px;color:var(--white);letter-spacing:1px;}
-.tribal-btn{width:54px;height:54px;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.tribal-btn{width:46px;height:46px;display:flex;align-items:center;justify-content:center;transition:.15s;}
 .tribal-btn:active{transform:scale(0.85);}
 /* ── BOTTOM NAV ── */
 .bottomnav{position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(6,11,32,0.97);border-top:0.5px solid #0f1e30;display:flex;align-items:center;justify-content:space-around;padding:0 10px;padding-bottom:env(safe-area-inset-bottom,0px);z-index:30;}
@@ -469,17 +469,25 @@ function unlockAudio() {
   });
 }
 // Unlock on ANY first interaction — touch, click, scroll, keydown
-['touchstart','click','keydown','wheel'].forEach(ev =>
+['touchstart','click','keydown','wheel','scroll'].forEach(ev =>
   document.addEventListener(ev, unlockAudio, {once:true, passive:true})
 );
+// Also unlock when user taps the reel area directly
+document.addEventListener('click', () => {
+  document.querySelectorAll('video').forEach(v => {
+    if (!v.paused && v.muted && !window._isMuted) { v.muted = false; }
+  });
+}, { passive: true });
 function toggleFullscreen(btn) {
   const reel = btn.closest('.real-reel');
   if (!reel) return;
   const svg = btn.querySelector('svg');
   if (!document.fullscreenElement) {
     // Go fullscreen
-    const el = reel.querySelector('video') || reel;
-    (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el);
+    // Use reel container for fullscreen, not video (video triggers PiP on desktop)
+    const el = reel;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (fn) fn.call(el);
     if (svg) svg.innerHTML = '<path class="fs-expand" d="M5 16H3v5h5v-2H5v-3zm-2-8h2V5h3V3H3v5zm13 11h-3v2h5v-5h-2v3zM14 3v2h3v3h2V3h-5z" fill="#e8dcc8"/>';
     btn.querySelector('.act-label').textContent = 'EXIT';
   } else {
@@ -840,13 +848,13 @@ function buildReel(v) {
     entries.forEach(e => {
       const vid = e.target.querySelector('video'); if (!vid) return;
       if (e.isIntersecting) {
-        vid.muted = true;
-        vid.play().then(() => {
-          // Auto-unmute: browsers allow unmuting after play() resolves
-          vid.muted = false;
-          window._audioUnlocked = true;
-          _audioUnlocked = true;
-        }).catch(()=>{ vid.muted=true; });
+        // Try unmuted first, fall back to muted if blocked
+        vid.muted = false;
+        vid.play().catch(() => {
+          // Browser blocked unmuted autoplay — play muted then unlock on tap
+          vid.muted = true;
+          vid.play().catch(()=>{});
+        });
         _currentVideoId = e.target.dataset.id;
         updateMuteUI();
       } else {
