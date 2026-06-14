@@ -484,10 +484,13 @@ function toggleFullscreen(btn) {
   const svg = btn.querySelector('svg');
   if (!document.fullscreenElement) {
     // Go fullscreen
-    // Use reel container for fullscreen, not video (video triggers PiP on desktop)
+    // Request fullscreen on reel container
     const el = reel;
-    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-    if (fn) fn.call(el);
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+    } catch(e) { console.log('Fullscreen error:', e); }
     if (svg) svg.innerHTML = '<path class="fs-expand" d="M5 16H3v5h5v-2H5v-3zm-2-8h2V5h3V3H3v5zm13 11h-3v2h5v-5h-2v3zM14 3v2h3v3h2V3h-5z" fill="#e8dcc8"/>';
     btn.querySelector('.act-label').textContent = 'EXIT';
   } else {
@@ -832,6 +835,7 @@ function buildReel(v) {
         </div>
         <span class="act-label">SHARE</span>
       </div>
+      ${window.innerWidth > 600 ? `
       <div class="act-col" onclick="toggleFullscreen(this)" style="cursor:pointer;margin-top:4px;">
         <div class="tribal-btn" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -839,7 +843,7 @@ function buildReel(v) {
           </svg>
         </div>
         <span class="act-label">FULL</span>
-      </div>
+      </div>` : ''}
 
     </div>`;
 
@@ -1347,13 +1351,24 @@ window.addEventListener('load', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  function gestureUnlock() {
+    window._audioUnlocked = true;
+    _audioUnlocked = true;
+    // Unmute any currently playing video
+    document.querySelectorAll('video').forEach(v => { if (!v.paused && !window._isMuted) v.muted = false; });
+  }
   document.getElementById('btn-next')?.addEventListener('click', () => {
+    gestureUnlock();
     if (_obSlide < 3) updateOb(_obSlide + 1);
     else { showScreen('auth'); paintStars(document.getElementById('auth-canvas')); switchTab('signup'); }
   });
   document.getElementById('btn-skip')?.addEventListener('click', () => {
+    gestureUnlock();
     showScreen('auth'); paintStars(document.getElementById('auth-canvas')); switchTab('signup');
   });
+  document.getElementById('btn-auth')?.addEventListener('click', gestureUnlock);
+  // Also unlock on any tap inside the app screen
+  document.getElementById('app')?.addEventListener('click', gestureUnlock, {once:true});
   // Close comment sheet on backdrop tap
   document.getElementById('c-sheet')?.addEventListener('click', e => { if(e.target.id==='c-sheet') closeComments(); });
   // Enter key on comment
