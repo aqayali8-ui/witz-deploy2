@@ -487,7 +487,7 @@ function toggleFullscreen(btn) {
     // Request fullscreen on reel container
     const el = reel;
     try {
-      if (el.requestFullscreen) await el.requestFullscreen();
+      if (el.requestFullscreen) el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
     } catch(e) { console.log('Fullscreen error:', e); }
